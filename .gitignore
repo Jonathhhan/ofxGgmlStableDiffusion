@@ -1,0 +1,45 @@
+# Visual Studio / OF project generator output
+.vs/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+icon.rc
+
+# Build intermediates
+obj/
+build/
+tests/build/
+
+# Example build output
+ofxGgmlStableDiffusionExample/bin/*.exe
+ofxGgmlStableDiffusionExample/bin/*.exp
+ofxGgmlStableDiffusionExample/bin/*.lib
+ofxGgmlStableDiffusionExample/bin/*.pdb
+ofxGgmlStableDiffusionExample/bin/imgui.ini
+ofxGgmlStableDiffusionExample/bin/stable-diffusion.dll
+ofxGgmlStableDiffusionExample/bin/libs/
+ofxGgmlStableDiffusionExample/bin/data/generated/
+ofxGgmlStableDiffusionExample/bin/data/models/*
+ofxGgmlStableDiffusionExample/bin/data/output/
+ofxGgmlStableDiffusionExample/bin/data/outputs/
+ofxGgmlStableDiffusionExample/bin/data/renders/
+ofxGgmlStableDiffusionExample/bin/data/videos/
+ofxGgmlStableDiffusionExample/bin/data/photomaker_images/
+!ofxGgmlStableDiffusionExample/bin/data/models/**/
+!ofxGgmlStableDiffusionExample/bin/data/models/**/.gitkeep
+
+# Native staging output
+libs/stable-diffusion/bin/
+libs/stable-diffusion/build/
+libs/stable-diffusion/downloads/
+libs/stable-diffusion/source/
+libs/stable-diffusion/lib/*
+!libs/stable-diffusion/lib/gitkeep
+
+# CMake / test output
+Testing/
+CMakeCache.txt
+CMakeFiles/
+CTestTestfile.cmake
+cmake_install.cmake

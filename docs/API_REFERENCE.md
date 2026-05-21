@@ -1,0 +1,333 @@
+# API Reference Guide
+
+## Overview
+
+This guide provides a high-level overview of the ofxGgmlStableDiffusion API. For detailed documentation of all classes and methods, see the [generated Doxygen documentation](api/html/index.html).
+
+## Core Classes
+
+### ofxGgmlStableDiffusion
+
+The main class for Stable Diffusion generation. Provides methods for:
+- Text-to-image generation
+- Image-to-image transformation
+- Video generation
+- Model management
+- Performance profiling
+
+**Key Methods:**
+- `generate(const ofxGgmlStableDiffusionImageRequest& request)` - Generate images
+- `generateVideo(const ofxGgmlStableDiffusionVideoRequest& request)` - Generate videos
+- `configureContext(const ofxGgmlStableDiffusionContextSettings& settings)` - Start asynchronous model loading
+- `requestCancellation()` - Best-effort cancellation at the earliest safe checkpoint
+- `isGenerating()` - Check if generation is in progress
+
+**Thread Safety:** The public stateful API is internally synchronized unless a method explicitly documents borrowed-pointer or blocking behavior. Long-running starts are serialized; overlapping starts fail with `ThreadBusy`.
+
+### ofxGgmlStableDiffusionRealtimeSession
+
+Real-time generation pipeline for interactive applications.
+
+**Key Features:**
+- Adaptive step count with progressive refinement
+- Low-latency mode for performance
+- Frame dropping when busy
+- Live parameter updates
+- Result/latency callbacks dispatched from `update()`
+
+**Usage:**
+```cpp
+ofxGgmlStableDiffusionRealtimeSession session;
+session.setGenerator(&sd);
+session.start(settings);
+
+// In update loop
+session.update();
+```
+
+### ofxGgmlStableDiffusionRealtimeVideoSession
+
+Runway-inspired local creative-loop scaffold for interactive video-like streams.
+This is not a proprietary world model and does not promise sub-100ms HD output;
+it uses the addon’s existing image generation path to create low-step preview
+frames, coalesce prompt edits, and optionally feed the last generated frame back
+through img2img for temporal continuity.
+
+**Key Features:**
+- Latest-prompt-wins request coalescing while a frame is generating
+- Preview/refine quality tiers with separate step and strength budgets
+- Previous-frame feedback via img2img
+- Frame and latency callbacks for live UI surfaces, dispatched from `update()`
+
+**Usage:**
+```cpp
+ofxGgmlStableDiffusionRealtimeVideoSettings settings;
+settings.previewSteps = 4;
+settings.refineSteps = 16;
+settings.usePreviousFrameFeedback = true;
+
+ofxGgmlStableDiffusionRealtimeVideoSession liveVideo;
+liveVideo.start(settings, sd);
+
+ofxGgmlStableDiffusionRealtimeVideoRequest request;
+request.prompt = "a dancer in a neon studio, handheld camera";
+liveVideo.submit(request);
+
+// In update loop
+liveVideo.update();
+```
+
+### ofxGgmlStableDiffusionCreativeWorkflow
+
+Unified live workflow surface for “preview now, queue a higher-quality render for
+later” pipelines.
+
+**Key Features:**
+- Shares one `ofxGgmlStableDiffusion` generator across realtime preview and queued renders
+- Queues image/video renders while keeping the realtime preview session API
+- Builds model-aware queued render requests from the last realtime preview prompt
+- Saves/restores workflow snapshots with preview prompts, context settings, and queued work
+
+**Usage:**
+```cpp
+ofxGgmlStableDiffusionCreativeWorkflow workflow;
+ofxGgmlStableDiffusionCreativeWorkflowSettings workflowSettings;
+workflowSettings.renderSampleSteps = 24;
+workflowSettings.renderCfgScale = 6.0f;
+workflow.start(workflowSettings, sd);
+
+ofxGgmlStableDiffusionRealtimeRequest liveRequest;
+liveRequest.prompt = "liquid light projections";
+workflow.submitImagePreview(liveRequest);
+workflow.queueImageRenderFromPreview();
+
+// In update loop
+workflow.update();
+```
+
+### ofxGgmlStableDiffusionBatchProcessor
+
+Generator-backed experimentation surface for parameter exploration and artifact export.
+
+**Implemented today:**
+- Batch/grid/sweep request and result data structures
+- Generator-backed grid generation, parameter sweeps, A/B comparisons, and batch execution
+- Parameter value helpers for supported generation fields
+- Metadata export plus representative image export for each run
+- Quality-scoring and progress-callback hooks
+- Configurable polling/timeout controls for the async generator
+
+**Usage:**
+```cpp
+ofxGgmlStableDiffusionBatchProcessor batchProcessor;
+batchProcessor.setGenerator(&sd);
+
+ofxGgmlStableDiffusionGridSettings gridSettings;
+gridSettings.baseRequest = baseRequest;
+gridSettings.xAxis = ofxGgmlStableDiffusionParameter::CfgScale;
+gridSettings.xValues = {2.0f, 4.0f, 6.0f};
+gridSettings.yAxis = ofxGgmlStableDiffusionParameter::SampleSteps;
+gridSettings.yValues = {12.0f, 24.0f};
+gridSettings.outputPath = "output/grid";
+
+auto gridResult = batchProcessor.generateGrid(gridSettings);
+gridResult.exportMetadata("output/grid/metadata.json");
+```
+
+### ofxGgmlStableDiffusionModelManager
+
+Model caching and preloading system.
+
+**Features:**
+- LRU cache with size limits
+- Model metadata extraction
+- Hot-swapping between models
+- Directory scanning
+
+## Request/Response Types
+
+### ofxGgmlStableDiffusionImageRequest
+
+Configuration for image generation requests.
+
+**Key Fields:**
+- `prompt` - Text prompt
+- `negativePrompt` - Negative prompt
+- `width`, `height` - Output dimensions
+- `sampleSteps` - Diffusion steps
+- `cfgScale` - Guidance scale
+- `seed` - Random seed (-1 for random)
+- `batchCount` - Number of images
+- `mode` - Generation mode
+- `controlNets` - ControlNet configurations
+
+### ofxGgmlStableDiffusionVideoRequest
+
+Configuration for video generation requests.
+
+**Key Fields:**
+- Same as ImageRequest, plus:
+- `frameCount` - Number of frames
+- `fps` - Frames per second
+- `endImage` - Target image for morphing
+- `controlFrames` - Per-frame control images
+
+### ofxGgmlStableDiffusionResult
+
+Generation results container.
+
+**Key Fields:**
+- `success` - Generation succeeded
+- `error` - Error information
+- `images` - Generated image frames
+- `video` - Video clip data
+- `actualSeedUsed` - Seed value used
+- `elapsedMilliseconds` - Generation time
+
+## Context Settings
+
+### ofxGgmlStableDiffusionContextSettings
+
+Model and runtime configuration.
+
+**Key Fields:**
+- `modelPath` - Path to model file
+- `vaePath` - Optional VAE model
+- `clipLPath`, `t5xxlPath` - Split model components
+- `loraModelDir` - LoRA directory
+- `embedDir` - Embeddings directory
+- `controlNetPath` - ControlNet model
+- `stackedIdEmbedDir` - PhotoMaker embeddings
+- `schedule` - Noise scheduler
+- `weightType` - Weight precision type
+- `clipSkip` - CLIP layers to skip
+- `vaeDecodeOnly` - VAE decode-only mode
+- `vaeTiling` - Enable VAE tiling for large images
+- `freeParamsImmediately` - Free memory after generation
+- `rngType` - Random number generator type
+- `diffusionFlashAttn` - Flash attention
+- `cacheMode` - Cache optimization mode
+
+## Error Handling
+
+### Error Codes
+
+- `None` - No error
+- `ModelNotFound` - Model file not found
+- `ModelCorrupted` - Model file corrupted
+- `ModelLoadFailed` - Failed to load model
+- `OutOfMemory` - Insufficient memory
+- `InvalidDimensions` - Invalid width/height
+- `InvalidBatchCount` - Invalid batch count
+- `InvalidFrameCount` - Invalid frame count
+- `InvalidParameter` - Invalid parameter value
+- `MissingInputImage` - Required input image missing
+- `GenerationFailed` - Generation failed
+- `ThreadBusy` - Another operation in progress
+- `UpscaleFailed` - Upscaling failed
+- `Cancelled` - Operation cancelled by user
+- `Unknown` - Unknown error
+
+### Error Information
+
+```cpp
+ofxGgmlStableDiffusionError error = sd.getLastErrorInfo();
+if (error.code != ofxGgmlStableDiffusionErrorCode::None) {
+    ofLogError() << error.message;
+    ofLogNotice() << "Suggestion: " << error.suggestion;
+}
+```
+
+## Cancellation Support
+
+New in this release: Support for cancelling long-running operations.
+
+**API:**
+- `requestCancellation()` - Request cancellation
+- `isCancellationRequested()` - Check if cancellation pending
+- `wasCancelled()` - Check if last operation was cancelled
+
+**Notes:**
+- Cancellation is checked between diffusion steps
+- Operation stops gracefully after current step
+- Error code will be `Cancelled` if cancelled
+
+**Example:**
+```cpp
+sd.generate(request);
+
+// In another thread or timer:
+if (userPressedCancel) {
+    sd.requestCancellation();
+}
+
+// After generation completes:
+if (sd.wasCancelled()) {
+    ofLogNotice() << "Generation was cancelled";
+}
+```
+
+## Platform Support
+
+| Platform | Readiness | Notes |
+| --- | --- | --- |
+| Linux (x64) | Stable | CPU, CUDA, and Vulkan runtime paths are supported |
+| Windows (x64) | Stable | CPU, CUDA, and Vulkan runtime paths are supported |
+| macOS | Experimental | Addon surface is supported; Metal runtime validation is still maturing |
+
+## Performance Tips
+
+1. **Use appropriate model size** - Smaller models for real-time, larger for quality
+2. **Enable VAE tiling** - For images larger than 1024x1024
+3. **Adjust sample steps** - Fewer steps for speed, more for quality
+4. **Use LCM/Turbo models** - For real-time applications
+5. **Enable profiling** - To identify bottlenecks
+6. **Preload models** - Use ModelManager to cache frequently-used models
+7. **Batch count** - Keep `request.batchCount` low; the experimental batch processor scaffold does not execute native generations yet
+
+## Thread Safety
+
+**Serialized long-running work:**
+- `generate()`, `generateVideo()`, `configureContext()`, and upscaler/context reloads can be called from any thread
+- Only one long-running task can run at a time; a second start fails with `ThreadBusy`
+
+**Safe to query/copy from any thread:**
+- `isGenerating()`, `isBusy()`
+- `requestCancellation()`, `isCancellationRequested()`, `wasCancelled()`
+- `getLastResult()`, `getImages()`, `getVideoClip()`, and other copied accessors
+
+**Worker-thread callbacks:**
+- `setProgressCallback()`
+- `setImageRankCallback()`
+
+**Borrowed-pointer accessors (handle with care):**
+- `getImagePixels()`
+- `getVideoFramePixels()`
+- `returnImages()`
+
+`ofxGgmlStableDiffusionRealtimeSession` and `ofxGgmlStableDiffusionRealtimeVideoSession`
+dispatch their callbacks from the thread that calls `update()`.
+
+## See Also
+
+- [Migration Guide](MIGRATION_GUIDE.md) - Upgrading from older versions
+- [Troubleshooting Guide](TROUBLESHOOTING.md) - Common issues and solutions
+- [Examples](examples/) - Code examples
+- [Generated API Docs](api/html/index.html) - Complete API reference
+
+## Generating Documentation
+
+To generate the complete API documentation:
+
+```bash
+# Install Doxygen if needed
+# Linux: sudo apt-get install doxygen graphviz
+# macOS: brew install doxygen graphviz
+# Windows: Download from doxygen.org
+
+# Generate documentation
+doxygen Doxyfile
+
+# Open documentation
+open docs/api/html/index.html
+```

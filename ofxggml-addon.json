@@ -1,0 +1,32 @@
+{
+  "name": "ofxGgmlStableDiffusion",
+  "lane": "stable-diffusion",
+  "coreBaseline": "v1.0.1",
+  "requires": [],
+  "owns": [
+    "stable-diffusion.cpp",
+    "text-to-image",
+    "image-to-image",
+    "inpainting",
+    "upscaling",
+    "native runtime staging"
+  ],
+  "features": [
+    "stable-diffusion.cpp wrapper lane",
+    "typed image generation requests",
+    "image-to-video helper workflows",
+    "standalone native runtime staging",
+    "local wrapper validation entrypoint"
+  ],
+  "platforms": [
+    "windows",
+    "macos",
+    "linux"
+  ],
+  "backends": [
+    "cpu",
+    "cuda",
+    "metal",
+    "vulkan"
+  ]
+}
