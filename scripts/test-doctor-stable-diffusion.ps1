@@ -14,6 +14,7 @@ foreach ($expected in @(
 	"ofxGgmlCore sibling",
 	"stable-diffusion header",
 	"native runtime",
+	"runtime provider",
 	"wrapper header",
 	"wrapper source",
 	"example addon file",
@@ -37,4 +38,7 @@ if ([string]::IsNullOrWhiteSpace([string]$parsed.Root)) {
 }
 if (!$parsed.Checks -or $parsed.Checks.Count -eq 0) {
 	throw "doctor JSON output did not include checks."
+}
+if ([string]::IsNullOrWhiteSpace([string]$parsed.RuntimeProvider)) {
+	throw "doctor JSON output did not include RuntimeProvider."
 }

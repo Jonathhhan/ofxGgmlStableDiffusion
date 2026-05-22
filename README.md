@@ -8,7 +8,7 @@ This addon is seeded from the existing `ofxStableDiffusion` implementation and
 keeps that wrapper-first stable-diffusion.cpp backend design, with the public
 addon name and API surface moved under the `ofxGgmlStableDiffusion` line.
 
-Current addon version: `1.0.0`
+Current addon version: `1.0.1`
 
 ## Staging Scope
 
@@ -23,8 +23,9 @@ replacement backend and it is not based on `ofxGgmlDiffusion`.
   rename settles.
 - Treat `ofxGgmlDiffusion`, GGUF GAN experiments, and unrelated model workflows
   as out of scope for this addon.
-- Add ecosystem metadata and validation only around the existing wrapper; do not
-  introduce a dependency on `ofxGgmlCore` or shared ggml binaries by default.
+- Add ecosystem metadata and validation only around the existing wrapper. The
+  default runtime stays standalone, while `-UseSystemGgml` is available as an
+  explicit Core ggml integration path for controlled builds.
 
 ## Requirements
 
@@ -451,6 +452,7 @@ You can also use:
 
 - `scripts/run-tests.ps1`
 - `scripts/run-tests.sh`
+- `scripts/run-stable-diffusion-runtime-smoke.ps1 -Json -SummaryOnly`
 
 Test notes: [tests/README.md](tests/README.md)
 

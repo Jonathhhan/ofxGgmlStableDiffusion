@@ -81,6 +81,21 @@ function Add-RequiredLibraryPath {
     $Libraries.Add($Path)
 }
 
+function Get-CoreProviderManifest {
+    param([string]$ProviderPath)
+
+    $manifestScript = Join-Path $ProviderPath 'scripts\runtime-provider-manifest.ps1'
+    if (-not (Test-Path -LiteralPath $manifestScript -PathType Leaf)) {
+        return $null
+    }
+
+    $json = & $manifestScript -Json -SummaryOnly 2>$null
+    if (!$? -or !$json) {
+        return $null
+    }
+    return (($json | ForEach-Object { $_.ToString() }) -join "`n") | ConvertFrom-Json
+}
+
 function New-OfxGgmlCmakePackage {
     param(
         [string]$OfxGgmlPath,
@@ -89,17 +104,23 @@ function New-OfxGgmlCmakePackage {
         [bool]$EnableVulkan
     )
 
-    $includeDir = [System.IO.Path]::Combine($OfxGgmlPath, 'libs', 'ggml', 'include')
-    $libDir = [System.IO.Path]::Combine($OfxGgmlPath, 'libs', 'ggml', 'lib')
+    $providerManifest = Get-CoreProviderManifest -ProviderPath $OfxGgmlPath
+    if ($providerManifest) {
+        $includeDir = [string]$providerManifest.GgmlIncludeDir
+        $libDir = [string]$providerManifest.GgmlLibDir
+    } else {
+        $includeDir = [System.IO.Path]::Combine($OfxGgmlPath, 'libs', 'ggml', 'include')
+        $libDir = [System.IO.Path]::Combine($OfxGgmlPath, 'libs', 'ggml', 'lib')
+    }
     $packageDir = Join-Path $PackageRoot 'ggml'
     $libraries = [System.Collections.Generic.List[string]]::new()
 
-    Add-RequiredLibraryPath -Libraries $libraries -Path (Join-Path $libDir 'ggml.lib') -Description 'ofxGgml ggml.lib'
-    Add-RequiredLibraryPath -Libraries $libraries -Path (Join-Path $libDir 'ggml-base.lib') -Description 'ofxGgml ggml-base.lib'
-    Add-RequiredLibraryPath -Libraries $libraries -Path (Join-Path $libDir 'ggml-cpu.lib') -Description 'ofxGgml ggml-cpu.lib'
+    Add-RequiredLibraryPath -Libraries $libraries -Path (Join-Path $libDir 'ggml.lib') -Description 'system ggml.lib'
+    Add-RequiredLibraryPath -Libraries $libraries -Path (Join-Path $libDir 'ggml-base.lib') -Description 'system ggml-base.lib'
+    Add-RequiredLibraryPath -Libraries $libraries -Path (Join-Path $libDir 'ggml-cpu.lib') -Description 'system ggml-cpu.lib'
 
     if ($EnableCuda) {
-        Add-RequiredLibraryPath -Libraries $libraries -Path (Join-Path $libDir 'ggml-cuda.lib') -Description 'ofxGgml ggml-cuda.lib'
+        Add-RequiredLibraryPath -Libraries $libraries -Path (Join-Path $libDir 'ggml-cuda.lib') -Description 'system ggml-cuda.lib'
         $cudaLibDir = if ($env:CUDA_PATH) { [System.IO.Path]::Combine($env:CUDA_PATH, 'lib', 'x64') } else { '' }
         Add-RequiredLibraryPath -Libraries $libraries -Path (Join-Path $cudaLibDir 'cublas.lib') -Description 'CUDA cublas.lib'
         Add-RequiredLibraryPath -Libraries $libraries -Path (Join-Path $cudaLibDir 'cudart.lib') -Description 'CUDA cudart.lib'
@@ -107,7 +128,7 @@ function New-OfxGgmlCmakePackage {
     }
 
     if ($EnableVulkan) {
-        Add-RequiredLibraryPath -Libraries $libraries -Path (Join-Path $libDir 'ggml-vulkan.lib') -Description 'ofxGgml ggml-vulkan.lib'
+        Add-RequiredLibraryPath -Libraries $libraries -Path (Join-Path $libDir 'ggml-vulkan.lib') -Description 'system ggml-vulkan.lib'
         $vulkanLibDir = if ($env:VULKAN_SDK) { [System.IO.Path]::Combine($env:VULKAN_SDK, 'Lib') } else { '' }
         Add-RequiredLibraryPath -Libraries $libraries -Path (Join-Path $vulkanLibDir 'vulkan-1.lib') -Description 'Vulkan vulkan-1.lib'
     }
@@ -395,6 +416,20 @@ function Get-ReleaseMetadata {
     return Invoke-GitHubJsonRequest -Uri ($repoApiBase + '/tags/' + $escapedTag)
 }
 
+function New-DryRunReleaseMetadata {
+    param(
+        [string]$Tag,
+        [string]$Repository
+    )
+    $resolvedTag = if ([string]::IsNullOrWhiteSpace($Tag)) { "remote default" } else { $Tag }
+    return [pscustomobject]@{
+        tag_name = $resolvedTag
+        target_commitish = ""
+        html_url = $Repository
+        zipball_url = ""
+    }
+}
+
 function Get-GgmlReleaseMetadata {
     param([string]$Tag)
 
@@ -473,7 +508,11 @@ function Refresh-GgmlVendorTree {
         [switch]$DryRun
     )
 
-    $releaseMetadata = Get-GgmlReleaseMetadata -Tag $Tag
+    $releaseMetadata = if ($DryRun) {
+        New-DryRunReleaseMetadata -Tag $Tag -Repository 'https://github.com/ggml-org/ggml'
+    } else {
+        Get-GgmlReleaseMetadata -Tag $Tag
+    }
     $resolvedReleaseTag = $releaseMetadata.tag_name
     $downloadRoot = Join-Path $env:TEMP 'ofxsd-ggml-release'
     $cloneRoot = Join-Path $downloadRoot ('clone-' + $resolvedReleaseTag)
@@ -677,7 +716,13 @@ if (-not $cmake) {
 }
 
 $effectiveSourceReleaseTag = if ([string]::IsNullOrWhiteSpace($SourceReleaseTag)) { $DefaultSourceReleaseTag } else { $SourceReleaseTag }
-$releaseMetadata = Get-ReleaseMetadata -Tag $effectiveSourceReleaseTag
+$releaseMetadata = if ($DryRun) {
+    New-DryRunReleaseMetadata `
+        -Tag $effectiveSourceReleaseTag `
+        -Repository 'https://github.com/leejet/stable-diffusion.cpp'
+} else {
+    Get-ReleaseMetadata -Tag $effectiveSourceReleaseTag
+}
 $resolvedReleaseTag = $releaseMetadata.tag_name
 $downloadRoot = Join-Path $env:TEMP 'ofxsd-source-release'
 $cloneRoot = Join-Path $downloadRoot ('clone-' + $resolvedReleaseTag)
@@ -739,7 +784,10 @@ if (-not $SkipSourceRefresh) {
 }
 
 if (-not (Test-Path -LiteralPath $SourceDir)) {
-    throw @"
+    if ($DryRun) {
+        Write-Host "Dry run: source directory is not staged yet; configure command is shown for the planned path."
+    } else {
+        throw @"
 stable-diffusion.cpp source was not found at:
   $SourceDir
 
@@ -750,48 +798,63 @@ Recommended workflow:
 This addon intentionally keeps stable-diffusion.cpp standalone rather than sharing
 the ggml build from ofxGgml, to avoid ABI/version coupling across addons.
 "@
+    }
 }
 
 $sourceCmakeLists = Join-Path $SourceDir 'CMakeLists.txt'
 if (-not (Test-Path -LiteralPath $sourceCmakeLists)) {
-    throw "No CMakeLists.txt was found in $SourceDir. Vendor the full stable-diffusion.cpp source tree first."
+    if ($DryRun) {
+        Write-Host "Dry run: CMakeLists.txt is not staged yet; source refresh would provide it."
+    } else {
+        throw "No CMakeLists.txt was found in $SourceDir. Vendor the full stable-diffusion.cpp source tree first."
+    }
 }
 
 # Handle system GGML configuration
 if ($UseSystemGgml) {
-    # Set default ofxGgml path if not provided
+    # Set default provider path if not provided. Core is the managed ecosystem default.
     if ([string]::IsNullOrWhiteSpace($OfxGgmlPath)) {
-        $OfxGgmlPath = [System.IO.Path]::Combine($AddonRoot, '..', 'ofxGgml')
+        $OfxGgmlPath = [System.IO.Path]::Combine($AddonRoot, '..', 'ofxGgmlCore')
     }
 
     # Convert to absolute path
     $OfxGgmlPath = [System.IO.Path]::GetFullPath($OfxGgmlPath)
 
-    # Validate ofxGgml exists
+    # Validate provider exists
     if (-not (Test-Path -LiteralPath $OfxGgmlPath)) {
         throw @"
-ofxGgml not found at:
+Core ggml provider not found at:
   $OfxGgmlPath
 
-Use -OfxGgmlPath to specify the correct location.
+Use -OfxGgmlPath to specify an ofxGgmlCore or compatible provider location.
 "@
     }
 
-    $ofxGgmlIncludeDir = [System.IO.Path]::Combine($OfxGgmlPath, 'libs', 'ggml', 'include')
-    $ofxGgmlLibDir = [System.IO.Path]::Combine($OfxGgmlPath, 'libs', 'ggml', 'lib')
+    $providerManifest = Get-CoreProviderManifest -ProviderPath $OfxGgmlPath
+    if ($providerManifest) {
+        $ofxGgmlIncludeDir = [string]$providerManifest.GgmlIncludeDir
+        $ofxGgmlLibDir = [string]$providerManifest.GgmlLibDir
+        if (-not [bool]$providerManifest.ReadyForCompanions) {
+            throw "Core ggml provider is not ready for companions. Run ofxGgmlCore\scripts\setup-ggml.ps1 first."
+        }
+    } else {
+        $ofxGgmlIncludeDir = [System.IO.Path]::Combine($OfxGgmlPath, 'libs', 'ggml', 'include')
+        $ofxGgmlLibDir = [System.IO.Path]::Combine($OfxGgmlPath, 'libs', 'ggml', 'lib')
+    }
 
     # Check for GGML headers
     if (-not (Test-Path -LiteralPath $ofxGgmlIncludeDir)) {
         throw @"
-ofxGgml GGML headers not found at:
+System GGML headers not found at:
   $ofxGgmlIncludeDir
 
-Build ofxGgml first.
+Build ofxGgmlCore first.
 "@
     }
 
-    Write-Step "Using system GGML from ofxGgml"
-    Write-Host ("    ofxGgml path: {0}" -f $OfxGgmlPath)
+    Write-Step "Using system GGML from ofxGgmlCore-compatible provider"
+    Write-Host ("    provider path: {0}" -f $OfxGgmlPath)
+    Write-Host ("    provider manifest: {0}" -f ($(if ($providerManifest) { 'ON' } else { 'OFF' })))
 }
 
 if ($Clean -and (Test-Path -LiteralPath $BuildDir)) {

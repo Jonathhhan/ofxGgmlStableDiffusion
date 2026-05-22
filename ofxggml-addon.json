@@ -3,6 +3,8 @@
   "lane": "stable-diffusion",
   "coreBaseline": "v1.0.1",
   "requires": [],
+  "version": "1.0.1",
+  "runtimeSmokeReport": ".stable-diffusion-runtime-smoke.json",
   "owns": [
     "stable-diffusion.cpp",
     "text-to-image",

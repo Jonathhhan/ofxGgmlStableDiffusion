@@ -86,6 +86,67 @@ function Get-NativeRuntimeCandidates {
 	)
 }
 
+function Get-CoreProviderManifest {
+	$coreRoot = Join-Path $addonsRoot "ofxGgmlCore"
+	$manifestScript = Join-Path $coreRoot "scripts\runtime-provider-manifest.ps1"
+	if (!(Test-Path -LiteralPath $manifestScript -PathType Leaf)) {
+		return $null
+	}
+	$json = & $manifestScript -Json -SummaryOnly 2>$null
+	if (!$? -or !$json) {
+		return $null
+	}
+	return (($json | ForEach-Object { $_.ToString() }) -join "`n") | ConvertFrom-Json
+}
+
+function Get-StableDiffusionRuntimeProvider {
+	param([string[]]$RuntimeMatches)
+	if (@($RuntimeMatches).Count -eq 0) {
+		return [pscustomobject]@{
+			State = "WARN"
+			Name = "runtime provider"
+			Provider = "unknown"
+			Detail = "native runtime is not staged yet"
+		}
+	}
+
+	$cachePath = Join-Path $addonRoot "libs\stable-diffusion\build\CMakeCache.txt"
+	if (Test-Path -LiteralPath $cachePath -PathType Leaf) {
+		$cache = Get-Content -LiteralPath $cachePath -Raw
+		if ($cache -match "(?m)^SD_USE_SYSTEM_GGML:BOOL=ON") {
+			$coreManifest = Get-CoreProviderManifest
+			$detail = "system ggml from ofxGgmlCore"
+			if ($coreManifest) {
+				$backends = @("CPU", "CUDA", "Vulkan", "Metal", "OpenCL") | Where-Object {
+					$coreManifest.EnabledBackends.$_
+				}
+				if ($backends.Count -gt 0) {
+					$detail += "; Core backends: " + ($backends -join ", ")
+				}
+			}
+			return [pscustomobject]@{
+				State = "OK"
+				Name = "runtime provider"
+				Provider = "system-ggml-core"
+				Detail = $detail
+			}
+		}
+		return [pscustomobject]@{
+			State = "OK"
+			Name = "runtime provider"
+			Provider = "standalone"
+			Detail = "standalone stable-diffusion.cpp runtime"
+		}
+	}
+
+	return [pscustomobject]@{
+		State = "OK"
+		Name = "runtime provider"
+		Provider = "standalone"
+		Detail = "standalone runtime staged; build cache unavailable"
+	}
+}
+
 $checks = @()
 $checks += New-Check "OK" "addon root" $addonRoot.Path
 
@@ -117,6 +178,9 @@ if ($runtimeMatches.Count -gt 0) {
 } else {
 	$checks += New-Check "WARN" "native runtime" "run scripts\setup_addon.ps1 or scripts\build-stable-diffusion.ps1"
 }
+
+$runtimeProvider = Get-StableDiffusionRuntimeProvider -RuntimeMatches $runtimeMatches
+$checks += New-Check $runtimeProvider.State $runtimeProvider.Name $runtimeProvider.Detail
 
 $checks += Test-PathCheck `
 	-Path (Join-Path $addonRoot "src\ofxGgmlStableDiffusion.h") `
@@ -179,6 +243,7 @@ if ($Json) {
 		Warnings = $script:Warnings
 		Checks = $checks
 		NativeRuntimeCandidates = $runtimeCandidates
+		RuntimeProvider = $runtimeProvider.Provider
 	} | ConvertTo-Json -Depth 6
 } else {
 	Write-Host "ofxGgmlStableDiffusion doctor"

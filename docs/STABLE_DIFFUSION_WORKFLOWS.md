@@ -19,6 +19,10 @@ ecosystem automation while this lane carries stable-diffusion.cpp work.
 - Keep the default runtime standalone.
 - Do not introduce a default dependency on `ofxGgmlCore` or shared ggml
   binaries.
+- Use `scripts\build-stable-diffusion.ps1 -UseSystemGgml` only as an explicit
+  Core ggml integration path; the script defaults that provider to
+  `..\ofxGgmlCore` and doctor reports whether the staged runtime is standalone,
+  Core/system ggml, or unknown.
 - Do not replace stable-diffusion.cpp with unrelated GAN, GGUF GAN, or
   `ofxGgmlDiffusion` workflows.
 - Keep model weights, downloaded runtimes, generated media, build output, and
@@ -37,3 +41,14 @@ For wrapper-only checks, run:
 ```powershell
 scripts\run-tests.ps1
 ```
+
+## Migration Notes
+
+- Existing `ofxStableDiffusion` users should migrate to
+  `ofxGgmlStableDiffusion`; this repository is the managed continuation of that
+  addon under the ofxGgml naming scheme.
+- Legacy `ofxGgml` users should move text/chat/embedding workflows to
+  `ofxGgmlLlama`, segmentation workflows to `ofxGgmlSam`, and shared ggml
+  runtime setup to `ofxGgmlCore`.
+- Do not copy dirty legacy folders wholesale. Promote individual improvements
+  only when they match a managed lane and have focused validation.

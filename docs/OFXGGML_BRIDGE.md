@@ -30,16 +30,18 @@ This is the recommended integration path because it:
 
 ### 2. System GGML Integration (Optional)
 
-For advanced use cases, ofxGgmlStableDiffusion can now optionally consume GGML from ofxGgml at build time using `stable-diffusion.cpp`'s built-in `-DSD_USE_SYSTEM_GGML=ON` support.
+For advanced use cases, ofxGgmlStableDiffusion can optionally consume GGML from
+`ofxGgmlCore` at build time using `stable-diffusion.cpp`'s built-in
+`-DSD_USE_SYSTEM_GGML=ON` support.
 
 **Build with system GGML:**
 
 ```bash
 # Linux/macOS
-./scripts/build-stable-diffusion.sh --use-system-ggml --ofxggml-path ../ofxGgml
+./scripts/build-stable-diffusion.sh --use-system-ggml --ofxggml-path ../ofxGgmlCore
 
 # Windows
-.\scripts\build-stable-diffusion.ps1 -UseSystemGgml -OfxGgmlPath ..\ofxGgml
+.\scripts\build-stable-diffusion.ps1 -UseSystemGgml -OfxGgmlPath ..\ofxGgmlCore
 ```
 
 **What this provides:**
@@ -48,7 +50,7 @@ For advanced use cases, ofxGgmlStableDiffusion can now optionally consume GGML f
 - Consistent GGML version across all addons
 
 **Important requirements:**
-- ofxGgml must be built first
+- ofxGgmlCore must be built first
 - Backend flags must match (CPU/CUDA/Vulkan)
 - GGML versions must be compatible
 - This is opt-in; default remains standalone for stability
@@ -57,9 +59,9 @@ See [docs/NATIVE_BUILD.md](NATIVE_BUILD.md) for complete system GGML build instr
 
 ## Staged Runtime Comparison
 
-### `ofxGgml`
+### `ofxGgmlCore`
 
-`ofxGgml` stages a full `ggml` SDK/runtime:
+`ofxGgmlCore` stages a full `ggml` SDK/runtime:
 
 - public headers in `libs/ggml/include`
 - public libs in `libs/ggml/lib`
@@ -85,13 +87,13 @@ It does not stage a public `ggml` SDK surface for other addons to consume.
 
 **In system GGML mode (optional):**
 
-`ofxGgmlStableDiffusion` links against ofxGgml's GGML and only stages:
+`ofxGgmlStableDiffusion` links against ofxGgmlCore's GGML and only stages:
 - public header in `libs/stable-diffusion/include/stable-diffusion.h`
 - staged runtime in `libs/stable-diffusion/lib/...`
-  - `stable-diffusion.dll` (linked against ofxGgml's GGML)
+  - `stable-diffusion.dll` (linked against ofxGgmlCore's GGML)
   - `stable-diffusion.lib`
 
-GGML itself comes from ofxGgml in this mode.
+GGML itself comes from ofxGgmlCore in this mode.
 
 ## Why Addon-Level Integration Is The Default
 

@@ -62,6 +62,9 @@ $requiredPaths = @(
     "scripts/doctor-stable-diffusion.bat",
     "scripts/doctor-stable-diffusion.sh",
     "scripts/test-doctor-stable-diffusion.ps1",
+    "scripts/run-stable-diffusion-runtime-smoke.ps1",
+    "scripts/run-stable-diffusion-runtime-smoke.bat",
+    "scripts/test-build-stable-diffusion-dry-run.ps1",
     "tests/CMakeLists.txt"
 )
 
@@ -94,6 +97,18 @@ Write-Step "Checking Stable Diffusion doctor"
 & (Join-Path $scriptRoot "test-doctor-stable-diffusion.ps1")
 if (!$?) {
     throw "Stable Diffusion doctor smoke test failed"
+}
+
+Write-Step "Checking Stable Diffusion build dry-runs"
+& (Join-Path $scriptRoot "test-build-stable-diffusion-dry-run.ps1")
+if (!$?) {
+    throw "Stable Diffusion build dry-run smoke test failed"
+}
+
+Write-Step "Checking Stable Diffusion runtime smoke dry-run"
+& (Join-Path $scriptRoot "run-stable-diffusion-runtime-smoke.ps1") -DryRun -Json -SummaryOnly
+if (!$?) {
+    throw "Stable Diffusion runtime smoke dry-run failed"
 }
 
 if (-not $SkipTests) {

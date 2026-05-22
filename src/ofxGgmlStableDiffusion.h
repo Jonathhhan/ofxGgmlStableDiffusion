@@ -13,6 +13,7 @@
 #include "core/ofxGgmlStableDiffusionRealtimeVideoSession.h"
 #include "core/ofxGgmlStableDiffusionSamplingHelpers.h"
 #include "core/ofxGgmlStableDiffusionTypes.h"
+#include "core/ofxGgmlStableDiffusionVersion.h"
 #include "video/ofxGgmlStableDiffusionLongVideoManifest.h"
 #include "video/ofxGgmlStableDiffusionLongVideoWorkflow.h"
 #include "video/ofxGgmlStableDiffusionVideoWorkflowHelpers.h"

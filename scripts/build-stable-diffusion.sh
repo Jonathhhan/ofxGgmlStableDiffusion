@@ -77,8 +77,8 @@ Options:
   --source-dir DIR       Override vendored source directory
   --build-dir DIR        Override build directory
   --install-lib-dir DIR  Override staged library directory
-  --use-system-ggml      Use system GGML from ofxGgml instead of bundled
-  --ofxggml-path PATH    Path to ofxGgml addon (default: ../../ofxGgml)
+  --use-system-ggml      Use system GGML from ofxGgmlCore instead of bundled
+  --ofxggml-path PATH    Path to ofxGgmlCore or compatible provider (default: ../ofxGgmlCore)
   --help                 Show this help message
 EOF
 			exit 0
@@ -103,17 +103,17 @@ command -v cmake >/dev/null 2>&1 || die "cmake was not found in PATH"
 
 # Handle system GGML configuration
 if [[ "$USE_SYSTEM_GGML" -eq 1 ]]; then
-	# Set default ofxGgml path if not provided
+	# Set default provider path if not provided. Core is the managed ecosystem default.
 	if [[ -z "$OFXGGML_PATH" ]]; then
-		OFXGGML_PATH="$ADDON_ROOT/../ofxGgml"
+		OFXGGML_PATH="$ADDON_ROOT/../ofxGgmlCore"
 	fi
 
 	# Expand to absolute path
 	OFXGGML_PATH="$(cd "$OFXGGML_PATH" 2>/dev/null && pwd || echo "$OFXGGML_PATH")"
 
-	# Validate ofxGgml exists
+	# Validate provider exists
 	if [[ ! -d "$OFXGGML_PATH" ]]; then
-		die "ofxGgml not found at $OFXGGML_PATH. Use --ofxggml-path to specify the correct location."
+		die "Core ggml provider not found at $OFXGGML_PATH. Use --ofxggml-path to specify an ofxGgmlCore or compatible provider location."
 	fi
 
 	OFXGGML_INCLUDE_DIR="$OFXGGML_PATH/libs/ggml/include"
@@ -121,10 +121,10 @@ if [[ "$USE_SYSTEM_GGML" -eq 1 ]]; then
 
 	# Check for GGML headers
 	if [[ ! -d "$OFXGGML_INCLUDE_DIR" ]]; then
-		die "ofxGgml GGML headers not found at $OFXGGML_INCLUDE_DIR. Build ofxGgml first."
+		die "System GGML headers not found at $OFXGGML_INCLUDE_DIR. Build ofxGgmlCore first."
 	fi
 
-	write_step "Using system GGML from ofxGgml at $OFXGGML_PATH"
+	write_step "Using system GGML from ofxGgmlCore-compatible provider at $OFXGGML_PATH"
 fi
 
 if [[ "$CLEAN" -eq 1 ]]; then

@@ -66,6 +66,8 @@ int main() {
 	expectContains(readme, "## Feature Readiness", readmePath);
 	expectContains(readme, "## Threading Contract", readmePath);
 	expectContains(readme, "Recommended starting point", readmePath);
+	expectContains(readme, "Current addon version: `1.0.1`", readmePath);
+	expectContains(readme, "run-stable-diffusion-runtime-smoke.ps1", readmePath);
 	expectContains(apiReference, "`weightType` - Weight precision type", apiRefPath);
 	expectContains(apiReference, "Generator-backed experimentation surface", apiRefPath);
 	expectContains(apiReference, "ofxGgmlStableDiffusionCreativeWorkflow", apiRefPath);

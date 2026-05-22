@@ -23,8 +23,8 @@ of relying on a global install.
 
 ## Why It Is Standalone (By Default)
 
-This addon intentionally does **not** link against the `ggml` build bundled by
-`ofxGgml` by default.
+This addon intentionally does **not** link against the `ggml` build staged by
+`ofxGgmlCore` by default.
 
 Reasons:
 
@@ -89,30 +89,30 @@ detected GPU backends. On Windows that means:
 Because the builds run in that order, the final canonical runtime is left on
 the highest-priority available backend: `cuda` > `vulkan` > `cpu-only`.
 
-## Legacy System GGML Mode
+## Core/System GGML Mode
 
 By default, ofxGgmlStableDiffusion builds with bundled GGML from the vendored
-`stable-diffusion.cpp` source. The scripts still contain an opt-in system GGML
-path from the earlier bridge work, but this is a legacy/advanced escape hatch,
-not the recommended addon configuration and not a requirement for ecosystem
-staging.
+`stable-diffusion.cpp` source. The scripts also contain an opt-in system GGML
+path for controlled projects that want to share the `ofxGgmlCore` ggml runtime.
+This is not the default addon configuration and not a requirement for ecosystem
+staging, but it is now the preferred shared-ggml experiment when Core is built.
 
 ### Prerequisites
 
-1. Build and install ofxGgml first with the desired backend (CPU/CUDA/Vulkan)
-2. Ensure ofxGgml has GGML headers at `libs/ggml/include` and libraries at `libs/ggml/lib`
-3. Verify GGML version compatibility between ofxGgml and the stable-diffusion.cpp version you're using
+1. Build and install `ofxGgmlCore` first with the desired backend (CPU/CUDA/Vulkan)
+2. Confirm `ofxGgmlCore\scripts\runtime-provider-manifest.ps1 -Json -SummaryOnly` reports ready
+3. Verify GGML version compatibility between Core and the stable-diffusion.cpp version you're using
 
 ### Building with System GGML
 
 **Linux/macOS:**
 
 ```bash
-# Use default path (../../ofxGgml)
+# Use default provider path (../../ofxGgmlCore)
 ./scripts/build-stable-diffusion.sh --use-system-ggml
 
-# Specify custom ofxGgml path
-./scripts/build-stable-diffusion.sh --use-system-ggml --ofxggml-path /path/to/ofxGgml
+# Specify custom Core-compatible provider path
+./scripts/build-stable-diffusion.sh --use-system-ggml --ofxggml-path /path/to/ofxGgmlCore
 
 # Combine with backend selection
 ./scripts/build-stable-diffusion.sh --use-system-ggml --cuda
@@ -121,11 +121,11 @@ staging.
 **Windows:**
 
 ```powershell
-# Use default path (..\..\ofxGgml)
+# Use default provider path (..\ofxGgmlCore)
 .\scripts\build-stable-diffusion.ps1 -UseSystemGgml
 
-# Specify custom ofxGgml path
-.\scripts\build-stable-diffusion.ps1 -UseSystemGgml -OfxGgmlPath C:\path\to\ofxGgml
+# Specify custom Core-compatible provider path
+.\scripts\build-stable-diffusion.ps1 -UseSystemGgml -OfxGgmlPath C:\path\to\ofxGgmlCore
 
 # Combine with backend selection
 .\scripts\build-stable-diffusion.ps1 -UseSystemGgml -Cuda
@@ -135,15 +135,15 @@ staging.
 
 When `-DSD_USE_SYSTEM_GGML=ON` is enabled:
 
-1. The build scripts validate that ofxGgml exists at the specified path
+1. The build scripts validate that `ofxGgmlCore` or a compatible provider exists at the specified path
 2. CMake is configured to use `find_package(ggml)` instead of building bundled GGML
-3. The stable-diffusion library links against ofxGgml's GGML binaries
-4. At runtime, both ofxGgmlStableDiffusion and ofxGgml share the same GGML library
+3. The stable-diffusion library links against the provider's GGML binaries
+4. At runtime, both ofxGgmlStableDiffusion and Core-backed companions share the same GGML library
 
 ### Important Considerations
 
 **Backend Alignment:**
-- ofxGgml and ofxGgmlStableDiffusion must use matching backends (both CPU, both CUDA, etc.)
+- ofxGgmlCore and ofxGgmlStableDiffusion must use matching backends (both CPU, both CUDA, etc.)
 - The build script does not automatically enforce this—ensure consistency manually
 
 **Version Compatibility:**
@@ -152,7 +152,7 @@ When `-DSD_USE_SYSTEM_GGML=ON` is enabled:
 - Monitor for ABI changes between GGML versions
 
 **Dependency Management:**
-- When using system GGML, your application must ensure ofxGgml's GGML library is available at runtime
+- When using system GGML, your application must ensure the Core/provider GGML libraries are available at runtime
 - On openFrameworks projects, include both addons in your project
 
 **Fallback:**
@@ -162,16 +162,16 @@ When `-DSD_USE_SYSTEM_GGML=ON` is enabled:
 
 ### Troubleshooting
 
-**Error: "ofxGgml not found"**
-- Verify the path to ofxGgml is correct
+**Error: "Core ggml provider not found"**
+- Verify the path to ofxGgmlCore is correct
 - Use `--ofxggml-path` / `-OfxGgmlPath` to specify the correct location
 
-**Error: "ofxGgml GGML headers not found"**
-- Build ofxGgml first before building ofxGgmlStableDiffusion
-- Ensure ofxGgml's GGML headers exist at `libs/ggml/include`
+**Error: "System GGML headers not found"**
+- Build ofxGgmlCore first before building ofxGgmlStableDiffusion
+- Ensure Core's GGML headers exist at `libs/ggml/include`
 
 **Runtime linking errors:**
-- Ensure backend flags match between ofxGgml and ofxGgmlStableDiffusion
+- Ensure backend flags match between ofxGgmlCore and ofxGgmlStableDiffusion
 - Verify GGML library versions are compatible
 - Check that GGML shared libraries are in your system's library path
 
