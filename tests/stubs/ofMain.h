@@ -83,6 +83,10 @@ public:
 		return pixels_.isAllocated();
 	}
 
+	void clear() {
+		pixels_.clear();
+	}
+
 	void setFromPixels(const ofPixels& pixels) {
 		pixels_.setFromPixels(pixels);
 	}
@@ -169,6 +173,16 @@ public:
 		return *this;
 	}
 };
+
+enum ofLogLevel {
+	OF_LOG_VERBOSE,
+	OF_LOG_NOTICE,
+	OF_LOG_WARNING,
+	OF_LOG_ERROR,
+	OF_LOG_SILENT
+};
+
+inline void ofSetLogLevel(ofLogLevel) {}
 
 #ifndef OF_MAIN_STUB_CUSTOM_LOG_FUNCTIONS
 inline ofLogStream ofLogNotice(const std::string& = "") { return {}; }
@@ -299,6 +313,10 @@ inline std::string ofGetTimestampString() {
 	return "19700101-000000";
 }
 
+inline std::string ofGetTimestampString(const std::string&) {
+	return "19700101-000000";
+}
+
 inline int ofGetWidth() {
 	return 1280;
 }
@@ -310,6 +328,8 @@ inline int ofGetHeight() {
 inline void ofBackground(int) {}
 inline void ofSetColor(int, int = 255, int = 255, int = 255) {}
 inline void ofDrawBitmapString(const std::string&, float, float) {}
+inline void ofSetWindowTitle(const std::string&) {}
+inline void ofSetFrameRate(int) {}
 
 template <typename T>
 inline T ofClamp(T value, T minValue, T maxValue) {
@@ -325,6 +345,21 @@ public:
 
 	std::string getExtension() const {
 		return std::filesystem::path(path_).extension().string();
+	}
+
+	std::string getBaseName() const {
+		return std::filesystem::path(path_).stem().string();
+	}
+
+	std::string getAbsolutePath() const {
+		std::error_code error;
+		const auto absolute = std::filesystem::absolute(path_, error);
+		return error ? path_ : absolute.string();
+	}
+
+	bool isFile() const {
+		std::error_code error;
+		return std::filesystem::is_regular_file(path_, error);
 	}
 
 	static bool doesFileExist(const std::string& path) {
@@ -346,9 +381,70 @@ public:
 		return std::filesystem::exists(path_);
 	}
 
+	void allowExt(const std::string& extension) {
+		std::string normalized = extension;
+		if (!normalized.empty() && normalized.front() == '.') {
+			normalized.erase(normalized.begin());
+		}
+		std::transform(normalized.begin(), normalized.end(), normalized.begin(), [](unsigned char c) {
+			return static_cast<char>(std::tolower(c));
+		});
+		allowedExtensions.push_back(normalized);
+	}
+
+	void listDir() {
+		files.clear();
+		std::error_code error;
+		if (!std::filesystem::exists(path_, error)) {
+			return;
+		}
+		for (const auto& entry : std::filesystem::directory_iterator(path_, error)) {
+			if (error || !entry.is_regular_file(error)) {
+				continue;
+			}
+			std::string extension = entry.path().extension().string();
+			if (!extension.empty() && extension.front() == '.') {
+				extension.erase(extension.begin());
+			}
+			std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) {
+				return static_cast<char>(std::tolower(c));
+			});
+			if (!allowedExtensions.empty() &&
+				std::find(allowedExtensions.begin(), allowedExtensions.end(), extension) == allowedExtensions.end()) {
+				continue;
+			}
+			files.emplace_back(entry.path().string());
+		}
+	}
+
+	std::size_t size() const {
+		return files.size();
+	}
+
+	const ofFile& getFile(int index) const {
+		return files.at(static_cast<std::size_t>(index));
+	}
+
 private:
 	std::string path_;
+	std::vector<std::string> allowedExtensions;
+	std::vector<ofFile> files;
 };
+
+class ofFileDialogResult {
+public:
+	bool bSuccess = false;
+
+	std::string getPath() {
+		return path;
+	}
+
+	std::string path;
+};
+
+inline ofFileDialogResult ofSystemLoadDialog(const std::string&) {
+	return {};
+}
 
 enum ofWindowModeType {
 	OF_WINDOW = 0
@@ -370,6 +466,10 @@ using ofAppBaseWindow = int;
 using ofAppBaseWindowPtr = std::shared_ptr<ofAppBaseWindow>;
 
 inline ofAppBaseWindowPtr ofCreateWindow(const ofGLFWWindowSettings&) {
+	return std::make_shared<ofAppBaseWindow>(0);
+}
+
+inline ofAppBaseWindowPtr ofGetCurrentWindow() {
 	return std::make_shared<ofAppBaseWindow>(0);
 }
 

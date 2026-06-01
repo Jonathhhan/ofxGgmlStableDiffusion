@@ -123,7 +123,7 @@ ofxGgmlStableDiffusion sd;
 ofxGgmlStableDiffusionContextSettings context;
 context.modelPath = "data/models/sd/sd_turbo.safetensors";
 context.nThreads = 8;
-context.weightType = SD_TYPE_F16;
+context.weightType = SD_TYPE_COUNT;
 sd.configureContext(context);
 
 ofxGgmlStableDiffusionImageRequest request;
@@ -304,11 +304,11 @@ preview clip without re-asking the native runtime for more frames.
 
 ### Video Performance Recommendations
 
-- **Use fast models for previews**: Prefer LCM/Turbo-style checkpoints with 4–8 steps for quick iteration; only re-run hero frames at higher quality.
-- **Quantize when possible**: F16 or Q8/Q5 levels often cut VRAM use by 50–75% and speed up inference, enabling higher resolutions or longer clips without swapping.
+- **Use fast models for previews**: Prefer LCM/Turbo-style checkpoints with 4-8 steps for quick iteration; only re-run hero frames at higher quality.
+- **Quantize when possible**: F16 or Q8/Q5 levels often cut VRAM use by 50-75% and speed up inference, enabling higher resolutions or longer clips without swapping.
 - **Keep the model warm and resident**: Reuse the same loaded context via the model manager; avoid swapping checkpoints mid-run and consider a throwaway warmup frame to eliminate first-run latency.
 - **Minimize unique frames**: Generate the smallest necessary source frame count, then stretch duration with `PingPong`, `Boomerang`, or `Loop` playback instead of regenerating.
-- **Right-size resolution, fps, and steps**: Lower resolution and fps where acceptable; clamp `sampleSteps` to ~15–25 for finals (lower for previews). Per-frame time scales directly with unique frames.
+- **Right-size resolution, fps, and steps**: Lower resolution and fps where acceptable; clamp `sampleSteps` to ~15-25 for finals (lower for previews). Per-frame time scales directly with unique frames.
 - **Trim preview I/O**: Skip metadata/JSON exports on preview passes; save sidecar files only on final renders to avoid extra disk churn.
 
 ## Coding Conventions (openFrameworks-aligned)
@@ -456,18 +456,12 @@ You can also use:
 
 Test notes: [tests/README.md](tests/README.md)
 
-## Example
+## Starter Example
 
-The example project lives in `ofxGgmlStableDiffusionExample/` and now exposes:
-
-- progress/error status
-- busy-state gating
-- video-mode selection
-- a small `Holoscan Bridge` section for the new bridge MVP, including prompt handoff, loaded-image submission, and inline bridge preview
-  - the native Holoscan runtime path is Linux-only for now; Windows and other platforms stay on the addon fallback lane until that runtime is validated there
-- frame export plus JSON metadata for generated clips
-- optional end-frame morphing
-- prompt morph / seed-sequence animation controls
+The canonical `ofxGgmlStableDiffusionExample/` project is intentionally small:
+load a model, enter a prompt, generate, cancel, and save one image. Use the
+focused root-level examples below for deeper image controls, image workflows,
+video, control frames, creative loops, LoRA stacks, and embeddings.
 
 ## Troubleshooting
 
@@ -524,10 +518,18 @@ Comprehensive documentation is available:
 
 ### Code Examples
 
-The `examples/` directory contains working sample applications:
+The addon root contains working sample applications, following the openFrameworks
+addon convention used by addons such as `ofxMidi`:
 
-- **[basic_generation](examples/basic_generation/)** - Recommended starting point; minimal typed text-to-image flow
-- **[cancellation_example](examples/cancellation_example/)** - Cancelling long-running operations
+- **[ofxGgmlStableDiffusionExample](ofxGgmlStableDiffusionExample/)** - Canonical starter; load, prompt, generate, cancel, and save
+- **[ofxGgmlStableDiffusionBasicGenerationExample](ofxGgmlStableDiffusionBasicGenerationExample/)** - Expanded typed text-to-image control panel
+- **[ofxGgmlStableDiffusionImageWorkflowExample](ofxGgmlStableDiffusionImageWorkflowExample/)** - Image-to-image, inpainting, and ControlNet guide workflows
+- **[ofxGgmlStableDiffusionVideoGenerationExample](ofxGgmlStableDiffusionVideoGenerationExample/)** - Focused typed video generation flow
+- **[ofxGgmlStableDiffusionVideoControlFramesExample](ofxGgmlStableDiffusionVideoControlFramesExample/)** - VACE-style guided video with per-frame controls
+- **[ofxGgmlStableDiffusionCreativeLoopExample](ofxGgmlStableDiffusionCreativeLoopExample/)** - Realtime prompt preview/refine loop
+- **[ofxGgmlStableDiffusionLoraEmbeddingExample](ofxGgmlStableDiffusionLoraEmbeddingExample/)** - LoRA adapter stacks and textual-inversion embeddings
+
+Each interactive example exposes cancellation while a long-running load or generation task is active.
 
 ### Quick Links
 

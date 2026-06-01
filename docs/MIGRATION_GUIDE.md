@@ -364,7 +364,7 @@ If you encounter migration issues:
 
 1. Check the [API Reference](API_REFERENCE.md)
 2. See [Troubleshooting Guide](TROUBLESHOOTING.md)
-3. Look at [examples/](examples/) for patterns
+3. Look at the root-level `ofxGgmlStableDiffusion*Example` folders for patterns
 4. Open a GitHub issue with your specific case
 
 ## Migration Checklist

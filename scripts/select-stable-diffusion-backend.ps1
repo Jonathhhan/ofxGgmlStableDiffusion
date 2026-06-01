@@ -48,6 +48,23 @@ function Copy-DirectoryContents {
         }
 }
 
+function Get-ExampleBinDirs {
+    param(
+        [string]$AddonRoot,
+        [string]$ExplicitExampleBinDir
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($ExplicitExampleBinDir)) {
+        return @($ExplicitExampleBinDir)
+    }
+
+    return @(
+        Get-ChildItem -LiteralPath $AddonRoot -Directory -Filter "ofxGgmlStableDiffusion*Example" |
+            Sort-Object Name |
+            ForEach-Object { Join-Path $_.FullName "bin" }
+    )
+}
+
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $addonRoot = (Resolve-Path (Join-Path $scriptRoot '..')).Path
 
@@ -69,9 +86,7 @@ if ([string]::IsNullOrWhiteSpace($InstallGgmlIncludeDir)) {
 if ([string]::IsNullOrWhiteSpace($InstallGgmlLibDir)) {
     $InstallGgmlLibDir = Join-Path $addonRoot 'libs\ggml\lib\vs'
 }
-if ([string]::IsNullOrWhiteSpace($ExampleBinDir)) {
-    $ExampleBinDir = Join-Path $addonRoot 'ofxGgmlStableDiffusionExample\bin'
-}
+$exampleBinDirs = Get-ExampleBinDirs -AddonRoot $addonRoot -ExplicitExampleBinDir $ExampleBinDir
 
 $variantGgmlStableDiffusionIncludeDir = Join-Path $VariantRootDir "$Backend\stable-diffusion\include"
 $variantGgmlStableDiffusionLibDir = Join-Path $VariantRootDir "$Backend\stable-diffusion\lib\vs"
@@ -116,11 +131,16 @@ if (Test-Path -LiteralPath $variantGgmlLibDir) {
 }
 
 $selectedDll = Join-Path $InstallLibDir 'stable-diffusion.dll'
-if ((Test-Path -LiteralPath $selectedDll) -and (Test-Path -LiteralPath $ExampleBinDir)) {
-    try {
-        Copy-Item -LiteralPath $selectedDll -Destination $ExampleBinDir -Force
-    } catch [System.IO.IOException] {
-        Write-Warning "Skipping example runtime copy because the destination DLL is in use. Close the running example app and rerun this selector if you want the chosen backend staged there too."
+if (Test-Path -LiteralPath $selectedDll) {
+    foreach ($binDir in $exampleBinDirs) {
+        if (-not (Test-Path -LiteralPath $binDir)) {
+            continue
+        }
+        try {
+            Copy-Item -LiteralPath $selectedDll -Destination $binDir -Force
+        } catch [System.IO.IOException] {
+            Write-Warning "Skipping example runtime copy into $binDir because the destination DLL is in use. Close the running example app and rerun this selector if you want the chosen backend staged there too."
+        }
     }
 }
 

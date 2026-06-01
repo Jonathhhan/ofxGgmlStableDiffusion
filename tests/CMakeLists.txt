@@ -258,9 +258,20 @@ target_include_directories(test_validation_helpers PRIVATE
 
 add_test(NAME validation_helpers COMMAND test_validation_helpers)
 
+add_library(example_starter_build OBJECT
+    ../ofxGgmlStableDiffusionExample/src/main.cpp
+    ../ofxGgmlStableDiffusionExample/src/ofApp.cpp
+)
+
+target_include_directories(example_starter_build PRIVATE
+    "${STUB_DIR}"
+    "${SRC_DIR}"
+    "${SD_INCLUDE_DIR}"
+)
+
 add_library(example_basic_generation_build OBJECT
-    ../examples/basic_generation/src/main.cpp
-    ../examples/basic_generation/src/ofApp.cpp
+    ../ofxGgmlStableDiffusionBasicGenerationExample/src/main.cpp
+    ../ofxGgmlStableDiffusionBasicGenerationExample/src/ofApp.cpp
 )
 
 target_include_directories(example_basic_generation_build PRIVATE
@@ -269,12 +280,56 @@ target_include_directories(example_basic_generation_build PRIVATE
     "${SD_INCLUDE_DIR}"
 )
 
-add_library(example_cancellation_build OBJECT
-    ../examples/cancellation_example/src/main.cpp
-    ../examples/cancellation_example/src/ofApp.cpp
+add_library(example_image_workflow_build OBJECT
+    ../ofxGgmlStableDiffusionImageWorkflowExample/src/main.cpp
+    ../ofxGgmlStableDiffusionImageWorkflowExample/src/ofApp.cpp
 )
 
-target_include_directories(example_cancellation_build PRIVATE
+target_include_directories(example_image_workflow_build PRIVATE
+    "${STUB_DIR}"
+    "${SRC_DIR}"
+    "${SD_INCLUDE_DIR}"
+)
+
+add_library(example_video_generation_build OBJECT
+    ../ofxGgmlStableDiffusionVideoGenerationExample/src/main.cpp
+    ../ofxGgmlStableDiffusionVideoGenerationExample/src/ofApp.cpp
+)
+
+target_include_directories(example_video_generation_build PRIVATE
+    "${STUB_DIR}"
+    "${SRC_DIR}"
+    "${SD_INCLUDE_DIR}"
+)
+
+add_library(example_creative_loop_build OBJECT
+    ../ofxGgmlStableDiffusionCreativeLoopExample/src/main.cpp
+    ../ofxGgmlStableDiffusionCreativeLoopExample/src/ofApp.cpp
+)
+
+target_include_directories(example_creative_loop_build PRIVATE
+    "${STUB_DIR}"
+    "${SRC_DIR}"
+    "${SD_INCLUDE_DIR}"
+)
+
+add_library(example_video_control_frames_build OBJECT
+    ../ofxGgmlStableDiffusionVideoControlFramesExample/src/main.cpp
+    ../ofxGgmlStableDiffusionVideoControlFramesExample/src/ofApp.cpp
+)
+
+target_include_directories(example_video_control_frames_build PRIVATE
+    "${STUB_DIR}"
+    "${SRC_DIR}"
+    "${SD_INCLUDE_DIR}"
+)
+
+add_library(example_lora_embedding_build OBJECT
+    ../ofxGgmlStableDiffusionLoraEmbeddingExample/src/main.cpp
+    ../ofxGgmlStableDiffusionLoraEmbeddingExample/src/ofApp.cpp
+)
+
+target_include_directories(example_lora_embedding_build PRIVATE
     "${STUB_DIR}"
     "${SRC_DIR}"
     "${SD_INCLUDE_DIR}"

@@ -32,7 +32,7 @@ struct ofxGgmlStableDiffusionModelInfo {
 	std::string taesdPath;
 	std::string controlNetPath;
 	std::string loraModelDir;
-	sd_type_t weightType = SD_TYPE_F16;
+	sd_type_t weightType = SD_TYPE_COUNT;
 
 	bool hasVAE() const {
 		return !vaePath.empty();

@@ -566,6 +566,101 @@ function Refresh-GgmlVendorTree {
         -Notes 'Source-only vendor refresh staged under stable-diffusion.cpp.'
 }
 
+function Apply-GgufExtraDimensionFoldPatch {
+    param(
+        [string]$SourceDir,
+        [switch]$DryRun
+    )
+
+    $ggufPath = Join-Path $SourceDir 'ggml\src\gguf.cpp'
+    Write-Step "Applying stable-diffusion.cpp GGUF dimension compatibility patch"
+    Write-Host ("    Target: {0}" -f $ggufPath)
+    if ($DryRun) {
+        Write-Host "Patch gguf.cpp so tensors with more than GGML_MAX_DIMS dimensions fold extra dimensions into the last ggml dimension."
+        return
+    }
+    if (-not (Test-Path -LiteralPath $ggufPath)) {
+        throw "Cannot patch GGUF reader because gguf.cpp was not found at: $ggufPath"
+    }
+
+    $content = [System.IO.File]::ReadAllText($ggufPath)
+    if ($content.Contains('int64_t folded_dims = 1;')) {
+        Write-Host "    Already patched."
+        return
+    }
+
+    $old = @'
+            if (n_dims > GGML_MAX_DIMS) {
+                GGML_LOG_ERROR("%s: tensor '%s' has invalid number of dimensions: %" PRIu32 " > %" PRIu32 "\n",
+                    __func__, info.t.name, n_dims, GGML_MAX_DIMS);
+                ok = false;
+                break;
+            }
+            for (uint32_t j = 0; ok && j < GGML_MAX_DIMS; ++j) {
+                info.t.ne[j] = 1;
+                if (j < n_dims) {
+                    ok = ok && gr.read(info.t.ne[j]);
+                }
+
+                // check that all ne are non-negative
+                if (info.t.ne[j] < 0) {
+                    GGML_LOG_ERROR("%s: tensor '%s' dimension %" PRIu32 " has invalid number of elements: %" PRIi64 " < 0\n",
+                        __func__, info.t.name, j, info.t.ne[j]);
+                    ok = false;
+                    break;
+                }
+            }
+'@
+    $new = @'
+            int64_t folded_dims = 1;
+            for (uint32_t j = 0; ok && j < GGML_MAX_DIMS; ++j) {
+                info.t.ne[j] = 1;
+                if (j < n_dims) {
+                    ok = ok && gr.read(info.t.ne[j]);
+                }
+
+                // check that all ne are non-negative
+                if (info.t.ne[j] < 0) {
+                    GGML_LOG_ERROR("%s: tensor '%s' dimension %" PRIu32 " has invalid number of elements: %" PRIi64 " < 0\n",
+                        __func__, info.t.name, j, info.t.ne[j]);
+                    ok = false;
+                    break;
+                }
+            }
+            for (uint32_t j = GGML_MAX_DIMS; ok && j < n_dims; ++j) {
+                int64_t folded_ne = 1;
+                ok = ok && gr.read(folded_ne);
+                if (folded_ne < 0) {
+                    GGML_LOG_ERROR("%s: tensor '%s' dimension %" PRIu32 " has invalid number of elements: %" PRIi64 " < 0\n",
+                        __func__, info.t.name, j, folded_ne);
+                    ok = false;
+                    break;
+                }
+                if (folded_ne != 0 && INT64_MAX/folded_ne <= folded_dims) {
+                    GGML_LOG_ERROR("%s: folded tensor dimensions in tensor '%s' are >= %" PRIi64 "\n",
+                        __func__, info.t.name, INT64_MAX);
+                    ok = false;
+                    break;
+                }
+                folded_dims *= folded_ne;
+            }
+            if (ok && n_dims > GGML_MAX_DIMS) {
+                if (folded_dims != 0 && INT64_MAX/folded_dims <= info.t.ne[GGML_MAX_DIMS - 1]) {
+                    GGML_LOG_ERROR("%s: folded shape for tensor '%s' is >= %" PRIi64 "\n",
+                        __func__, info.t.name, INT64_MAX);
+                    ok = false;
+                    break;
+                }
+                info.t.ne[GGML_MAX_DIMS - 1] *= folded_dims;
+            }
+'@
+    if (-not $content.Contains($old)) {
+        throw "Could not apply GGUF dimension compatibility patch. The gguf.cpp tensor-shape block did not match the expected upstream layout."
+    }
+
+    [System.IO.File]::WriteAllText($ggufPath, $content.Replace($old, $new))
+}
+
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $addonRoot = (Resolve-Path (Join-Path $scriptRoot '..')).Path
 
@@ -601,6 +696,24 @@ function Copy-DirectoryContents {
             Copy-Item -LiteralPath $_.FullName -Destination $Destination -Recurse -Force
         }
 }
+
+function Get-ExampleBinDirs {
+    param(
+        [string]$AddonRoot,
+        [string]$ExplicitExampleBinDir
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($ExplicitExampleBinDir)) {
+        return @($ExplicitExampleBinDir)
+    }
+
+    return @(
+        Get-ChildItem -LiteralPath $AddonRoot -Directory -Filter "ofxGgmlStableDiffusion*Example" |
+            Sort-Object Name |
+            ForEach-Object { Join-Path $_.FullName "bin" }
+    )
+}
+
 $stageBundledGgml = -not $UseSystemGgml
 
 if ($stageBundledGgml -and [string]::IsNullOrWhiteSpace($InstallGgmlIncludeDir)) {
@@ -612,15 +725,13 @@ if ($stageBundledGgml -and [string]::IsNullOrWhiteSpace($InstallGgmlLibDir)) {
 if ([string]::IsNullOrWhiteSpace($VariantRootDir)) {
     $VariantRootDir = Join-Path $addonRoot 'libs\variants'
 }
-if ([string]::IsNullOrWhiteSpace($ExampleBinDir)) {
-    $ExampleBinDir = Join-Path $addonRoot 'ofxGgmlStableDiffusionExample\bin'
-}
 if ([string]::IsNullOrWhiteSpace($InstallBinDir)) {
     $InstallBinDir = Join-Path $addonRoot 'libs\stable-diffusion\bin\vs'
 }
 if ($Jobs -le 0) {
     $Jobs = [Math]::Max(1, [Environment]::ProcessorCount)
 }
+$exampleBinDirs = Get-ExampleBinDirs -AddonRoot $addonRoot -ExplicitExampleBinDir $ExampleBinDir
 
 $selectedBackendCount = 0
 if ($CpuOnly) { $selectedBackendCount++ }
@@ -810,6 +921,8 @@ if (-not (Test-Path -LiteralPath $sourceCmakeLists)) {
     }
 }
 
+Apply-GgufExtraDimensionFoldPatch -SourceDir $SourceDir -DryRun:$DryRun
+
 # Handle system GGML configuration
 if ($UseSystemGgml) {
     # Set default provider path if not provided. Core is the managed ecosystem default.
@@ -874,8 +987,8 @@ if (-not $DryRun) {
         New-Item -ItemType Directory -Force -Path $InstallGgmlLibDir | Out-Null
     }
     New-Item -ItemType Directory -Force -Path $VariantRootDir | Out-Null
-    if ($ExampleBinDir) {
-        New-Item -ItemType Directory -Force -Path $ExampleBinDir | Out-Null
+    foreach ($binDir in $exampleBinDirs) {
+        New-Item -ItemType Directory -Force -Path $binDir | Out-Null
     }
 }
 
@@ -910,6 +1023,14 @@ if ($vendoredCommit -or $vendoredTargetCommit) {
 
 if (-not [string]::IsNullOrWhiteSpace($Generator)) {
     $configureArgs += @('-G', $Generator)
+}
+
+if ((Test-IsWindowsHost) -and ($enableCuda) -and
+    ([string]::IsNullOrWhiteSpace($Generator) -or $Generator -like 'Visual Studio*')) {
+    $configureArgs += @('-A', 'x64')
+    if ($env:CUDA_PATH -and (Test-Path -LiteralPath $env:CUDA_PATH)) {
+        $configureArgs += @('-T', "cuda=$env:CUDA_PATH")
+    }
 }
 
 $configureArgs += @(
@@ -1023,8 +1144,8 @@ Copy-IfPresent -Path $sdCliPath -Destination $InstallBinDir
 Copy-IfPresent -Path $webpLibPath -Destination $InstallLibDir
 Copy-IfPresent -Path $webpmuxLibPath -Destination $InstallLibDir
 Copy-IfPresent -Path $webmLibPath -Destination $InstallLibDir
-if ($ExampleBinDir) {
-    Copy-IfPresent -Path $dllPath -Destination $ExampleBinDir -AllowLockedDestination
+foreach ($binDir in $exampleBinDirs) {
+    Copy-IfPresent -Path $dllPath -Destination $binDir -AllowLockedDestination
 }
 
 if ($stageBundledGgml) {
@@ -1078,8 +1199,11 @@ if ($stageBundledGgml) {
     Write-Host "  ggml provider: $OfxGgmlPath"
 }
 Write-Host "  variant snapshot: $VariantRootDir\$backendMode"
-if ($ExampleBinDir) {
-    Write-Host "  runtime: $ExampleBinDir"
+if ($exampleBinDirs.Count -gt 0) {
+    Write-Host "  runtimes:"
+    foreach ($binDir in $exampleBinDirs) {
+        Write-Host "    $binDir"
+    }
 }
 
 

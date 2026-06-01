@@ -198,9 +198,40 @@ $checks += Test-PathCheck `
 	-MissingDetail "example addon file is missing"
 
 $checks += Test-PathCheck `
-	-Path (Join-Path $addonRoot "examples\basic_generation\addons.make") `
+	-Path (Join-Path $addonRoot "ofxGgmlStableDiffusionBasicGenerationExample\addons.make") `
 	-Name "basic generation example" `
 	-MissingDetail "basic generation example skeleton is missing"
+
+$checks += Test-PathCheck `
+	-Path (Join-Path $addonRoot "ofxGgmlStableDiffusionImageWorkflowExample\addons.make") `
+	-Name "image workflow example" `
+	-MissingDetail "image workflow example skeleton is missing"
+
+$checks += Test-PathCheck `
+	-Path (Join-Path $addonRoot "ofxGgmlStableDiffusionVideoGenerationExample\addons.make") `
+	-Name "video generation example" `
+	-MissingDetail "video generation example skeleton is missing"
+
+$checks += Test-PathCheck `
+	-Path (Join-Path $addonRoot "ofxGgmlStableDiffusionVideoControlFramesExample\addons.make") `
+	-Name "video control frames example" `
+	-MissingDetail "video control frames example skeleton is missing"
+
+$checks += Test-PathCheck `
+	-Path (Join-Path $addonRoot "ofxGgmlStableDiffusionCreativeLoopExample\addons.make") `
+	-Name "creative loop example" `
+	-MissingDetail "creative loop example skeleton is missing"
+
+$checks += Test-PathCheck `
+	-Path (Join-Path $addonRoot "ofxGgmlStableDiffusionLoraEmbeddingExample\addons.make") `
+	-Name "LoRA embedding example" `
+	-MissingDetail "LoRA embedding example skeleton is missing"
+
+$checks += Test-PathCheck `
+	-Path (Join-Path $addonsRoot "ofxImGui") `
+	-Name "example ImGui addon" `
+	-MissingDetail "ofxImGui sibling addon is missing for examples" `
+	-Directory
 
 if ([string]::IsNullOrWhiteSpace($Backend)) {
 	$checks += New-Check "WARN" "backend selection" "set OFXGGML_STABLE_DIFFUSION_BACKEND or pass -Backend"
@@ -213,19 +244,38 @@ $checks += Test-ConfiguredFile `
 	-Name "diffusion model" `
 	-Hint "set OFXGGML_STABLE_DIFFUSION_MODEL or pass -Model for a real render smoke"
 
-$artifactWarnings = @()
-foreach ($relative in @(
+$exampleNames = @(
+	"ofxGgmlStableDiffusionExample",
+	"ofxGgmlStableDiffusionBasicGenerationExample",
+	"ofxGgmlStableDiffusionImageWorkflowExample",
+	"ofxGgmlStableDiffusionVideoGenerationExample",
+	"ofxGgmlStableDiffusionVideoControlFramesExample",
+	"ofxGgmlStableDiffusionCreativeLoopExample",
+	"ofxGgmlStableDiffusionLoraEmbeddingExample"
+)
+$exampleArtifactSuffixes = @(
+	"bin\data\generated",
+	"bin\data\output",
+	"bin\data\outputs",
+	"bin\data\renders",
+	"bin\data\videos"
+)
+
+$artifactPaths = @(
 	"build",
 	".vs",
 	"tests\build",
 	"libs\stable-diffusion\build",
-	"libs\stable-diffusion\downloads",
-	"ofxGgmlStableDiffusionExample\bin\data\generated",
-	"ofxGgmlStableDiffusionExample\bin\data\output",
-	"ofxGgmlStableDiffusionExample\bin\data\outputs",
-	"ofxGgmlStableDiffusionExample\bin\data\renders",
-	"ofxGgmlStableDiffusionExample\bin\data\videos"
-)) {
+	"libs\stable-diffusion\downloads"
+)
+foreach ($exampleName in $exampleNames) {
+	foreach ($suffix in $exampleArtifactSuffixes) {
+		$artifactPaths += Join-Path $exampleName $suffix
+	}
+}
+
+$artifactWarnings = @()
+foreach ($relative in $artifactPaths) {
 	$warning = Test-ForbiddenPath -RelativePath $relative
 	if ($null -ne $warning) {
 		$artifactWarnings += $warning

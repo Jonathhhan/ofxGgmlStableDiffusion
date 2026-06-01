@@ -10,9 +10,12 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <cstdint>
 #include <exception>
 #include <filesystem>
 #include <chrono>
+#include <fstream>
+#include <limits>
 #include <mutex>
 #include <thread>
 
@@ -582,6 +585,14 @@ void appendSearchRootsForModelPath(std::vector<fs::path>& roots, const std::stri
 	}
 }
 
+std::string readGgufArchitecture(const std::string& path);
+
+struct GgufMetadataInfo {
+	std::string architecture;
+	uint32_t maxTensorDimensions = 0;
+	bool readable = false;
+};
+
 std::string resolveTextEncoderPathFromSubfolders(const ofxGgmlStableDiffusionContextSettings& settings) {
 	std::vector<fs::path> roots;
 	appendSearchRootsForModelPath(roots, settings.diffusionModelPath);
@@ -666,11 +677,285 @@ ofxGgmlStableDiffusionContextSettings resolveContextModelPaths(
 	const ofxGgmlStableDiffusionContextSettings& requestedSettings) {
 	ofxGgmlStableDiffusionContextSettings resolvedSettings = requestedSettings;
 
+	if (!resolvedSettings.modelPath.empty() && resolvedSettings.diffusionModelPath.empty()) {
+		const std::string architecture = ofToLower(readGgufArchitecture(resolvedSettings.modelPath));
+		if (architecture == "wan") {
+			resolvedSettings.diffusionModelPath = resolvedSettings.modelPath;
+			resolvedSettings.modelPath.clear();
+		}
+	}
+
 	if (resolvedSettings.t5xxlPath.empty()) {
 		resolvedSettings.t5xxlPath = resolveTextEncoderPathFromSubfolders(resolvedSettings);
 	}
 
 	return resolvedSettings;
+}
+
+std::vector<std::string> describeMissingContextModelPaths(
+	const ofxGgmlStableDiffusionContextSettings& settings) {
+	std::vector<std::string> missing;
+	const auto addMissingFile = [&missing](const std::string& path, const char* label) {
+		if (path.empty()) {
+			return;
+		}
+		std::error_code ec;
+		const fs::path p(path);
+		if (!fs::exists(p, ec) || ec || !fs::is_regular_file(p, ec) || ec) {
+			missing.push_back(std::string(label) + ": " + p.string());
+		}
+	};
+	addMissingFile(settings.modelPath, "model");
+	addMissingFile(settings.diffusionModelPath, "diffusion");
+	addMissingFile(settings.clipLPath, "clip_l");
+	addMissingFile(settings.clipGPath, "clip_g");
+	addMissingFile(settings.t5xxlPath, "text_encoder");
+	addMissingFile(settings.vaePath, "vae");
+	addMissingFile(settings.taesdPath, "taesd");
+	addMissingFile(settings.controlNetPath, "controlnet");
+	addMissingFile(settings.stackedIdEmbedDir, "photomaker");
+	return missing;
+}
+
+bool hasPrimaryContextModelPath(const ofxGgmlStableDiffusionContextSettings& settings) {
+	return !settings.modelPath.empty() || !settings.diffusionModelPath.empty();
+}
+
+template <typename T>
+bool readBinary(std::ifstream& input, T& value) {
+	input.read(reinterpret_cast<char*>(&value), sizeof(T));
+	return input.good();
+}
+
+bool skipGgufBytes(std::ifstream& input, uint64_t count) {
+	const auto maxOffset = static_cast<uint64_t>(std::numeric_limits<std::streamoff>::max());
+	if (count > maxOffset) {
+		return false;
+	}
+	input.seekg(static_cast<std::streamoff>(count), std::ios::cur);
+	return input.good();
+}
+
+bool readGgufString(std::ifstream& input, std::string& value) {
+	uint64_t size = 0;
+	if (!readBinary(input, size)) {
+		return false;
+	}
+	constexpr uint64_t maxReasonableMetadataStringSize = 64ull * 1024ull * 1024ull;
+	if (size > maxReasonableMetadataStringSize) {
+		return false;
+	}
+	value.resize(static_cast<std::size_t>(size));
+	if (size == 0) {
+		return true;
+	}
+	input.read(&value[0], static_cast<std::streamsize>(size));
+	return input.good();
+}
+
+uint64_t ggufFixedValueSize(uint32_t type) {
+	switch (type) {
+	case 0: return 1; // UINT8
+	case 1: return 1; // INT8
+	case 2: return 2; // UINT16
+	case 3: return 2; // INT16
+	case 4: return 4; // UINT32
+	case 5: return 4; // INT32
+	case 6: return 4; // FLOAT32
+	case 7: return 1; // BOOL
+	case 10: return 8; // UINT64
+	case 11: return 8; // INT64
+	case 12: return 8; // FLOAT64
+	default: return 0;
+	}
+}
+
+bool skipGgufValue(std::ifstream& input, uint32_t type) {
+	constexpr uint32_t ggufTypeString = 8;
+	constexpr uint32_t ggufTypeArray = 9;
+
+	if (type == ggufTypeString) {
+		std::string ignored;
+		return readGgufString(input, ignored);
+	}
+
+	if (type == ggufTypeArray) {
+		uint32_t elementType = 0;
+		uint64_t elementCount = 0;
+		if (!readBinary(input, elementType) || !readBinary(input, elementCount)) {
+			return false;
+		}
+
+		const uint64_t fixedSize = ggufFixedValueSize(elementType);
+		if (fixedSize > 0) {
+			if (elementCount > std::numeric_limits<uint64_t>::max() / fixedSize) {
+				return false;
+			}
+			return skipGgufBytes(input, elementCount * fixedSize);
+		}
+
+		for (uint64_t i = 0; i < elementCount; ++i) {
+			if (!skipGgufValue(input, elementType)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	const uint64_t fixedSize = ggufFixedValueSize(type);
+	return fixedSize > 0 && skipGgufBytes(input, fixedSize);
+}
+
+GgufMetadataInfo readGgufMetadataInfo(const std::string& path) {
+	GgufMetadataInfo info;
+	if (ofToLower(fs::path(path).extension().string()) != ".gguf") {
+		return info;
+	}
+
+	std::ifstream input(path, std::ios::binary);
+	if (!input.is_open()) {
+		return info;
+	}
+
+	constexpr uint32_t ggufMagic = 0x46554747;
+	constexpr uint32_t ggufTypeString = 8;
+	uint32_t magic = 0;
+	uint32_t version = 0;
+	uint64_t tensorCount = 0;
+	uint64_t kvCount = 0;
+	if (!readBinary(input, magic) || magic != ggufMagic ||
+		!readBinary(input, version) ||
+		!readBinary(input, tensorCount) ||
+		!readBinary(input, kvCount)) {
+		return info;
+	}
+
+	for (uint64_t i = 0; i < kvCount; ++i) {
+		std::string key;
+		uint32_t type = 0;
+		if (!readGgufString(input, key) || !readBinary(input, type)) {
+			return info;
+		}
+
+		if (key == "general.architecture" && type == ggufTypeString) {
+			if (!readGgufString(input, info.architecture)) {
+				return info;
+			}
+			continue;
+		}
+
+		if (!skipGgufValue(input, type)) {
+			return info;
+		}
+	}
+
+	for (uint64_t i = 0; i < tensorCount; ++i) {
+		std::string name;
+		uint32_t nDims = 0;
+		uint32_t type = 0;
+		uint64_t offset = 0;
+		if (!readGgufString(input, name) || !readBinary(input, nDims)) {
+			return info;
+		}
+		info.maxTensorDimensions = std::max(info.maxTensorDimensions, nDims);
+		if (nDims > 64) {
+			return info;
+		}
+		if (!skipGgufBytes(input, static_cast<uint64_t>(nDims) * sizeof(uint64_t)) ||
+			!readBinary(input, type) ||
+			!readBinary(input, offset)) {
+			return info;
+		}
+	}
+
+	info.readable = true;
+	return info;
+}
+
+std::string readGgufArchitecture(const std::string& path) {
+	return readGgufMetadataInfo(path).architecture;
+}
+
+bool isUnsupportedTextModelArchitecture(const std::string& architecture) {
+	const std::string value = ofToLower(architecture);
+	if (value.empty()) {
+		return false;
+	}
+	if (value.find("qwen_image") != std::string::npos) {
+		return false;
+	}
+
+	const std::vector<std::string> textArchitectures = {
+		"baichuan",
+		"bert",
+		"bloom",
+		"chatglm",
+		"deepseek",
+		"deepseek2",
+		"falcon",
+		"gemma",
+		"gpt",
+		"glm",
+		"llama",
+		"mistral",
+		"mixtral",
+		"phi",
+		"qwen",
+		"qwen2",
+		"qwen3",
+		"qwen35",
+		"starcoder"
+	};
+	return std::find(textArchitectures.begin(), textArchitectures.end(), value) != textArchitectures.end();
+}
+
+ValidationResult validatePrimaryModelCompatibility(
+	const ofxGgmlStableDiffusionContextSettings& settings) {
+	const auto validatePath = [](const std::string& path, const char* label) -> ValidationResult {
+		if (path.empty()) {
+			return {};
+		}
+
+		const GgufMetadataInfo metadata = readGgufMetadataInfo(path);
+		const std::string architecture = metadata.architecture;
+		if (!isUnsupportedTextModelArchitecture(architecture)) {
+			return {};
+		}
+
+		return {
+			ofxGgmlStableDiffusionErrorCode::ModelLoadFailed,
+			std::string("Unsupported GGUF architecture '") + architecture +
+				"' for " + label + ": " + path +
+				". Select a stable-diffusion.cpp image model instead of a language model."
+		};
+	};
+
+	ValidationResult result = validatePath(settings.modelPath, "main model");
+	if (!result.ok()) {
+		return result;
+	}
+	result = validatePath(settings.diffusionModelPath, "diffusion model");
+	if (!result.ok()) {
+		return result;
+	}
+
+	const std::string diffusionArchitecture = readGgufArchitecture(settings.diffusionModelPath);
+	if (ofToLower(diffusionArchitecture) == "wan") {
+		if (settings.t5xxlPath.empty()) {
+			return {
+				ofxGgmlStableDiffusionErrorCode::InvalidParameter,
+				"WAN diffusion models require a UMT5 / T5XXL text encoder path before loading context."
+			};
+		}
+		if (settings.vaePath.empty()) {
+			return {
+				ofxGgmlStableDiffusionErrorCode::InvalidParameter,
+				"WAN diffusion models require a WAN VAE path before loading context."
+			};
+		}
+	}
+
+	return {};
 }
 
 bool contextSettingsEquivalent(
@@ -701,11 +986,41 @@ void ofxGgmlStableDiffusion::configureContext(const ofxGgmlStableDiffusionContex
 		return;
 	}
 
+	const ofxGgmlStableDiffusionContextSettings resolvedSettings = resolveContextModelPaths(settings);
+	if (!hasPrimaryContextModelPath(resolvedSettings)) {
+		activeTask = ofxGgmlStableDiffusionTask::LoadModel;
+		setLastError(
+			ofxGgmlStableDiffusionErrorCode::ModelNotFound,
+			"No primary model path configured. Select a main model or diffusion model before loading context.");
+		return;
+	}
+
+	const std::vector<std::string> missingPaths = describeMissingContextModelPaths(resolvedSettings);
+	if (!missingPaths.empty()) {
+		std::string message = "Missing model files: ";
+		for (std::size_t i = 0; i < missingPaths.size(); ++i) {
+			message += missingPaths[i];
+			if (i + 1 < missingPaths.size()) {
+				message += "; ";
+			}
+		}
+		activeTask = ofxGgmlStableDiffusionTask::LoadModel;
+		setLastError(ofxGgmlStableDiffusionErrorCode::ModelNotFound, message);
+		return;
+	}
+
+	const ValidationResult compatibilityResult = validatePrimaryModelCompatibility(resolvedSettings);
+	if (!compatibilityResult.ok()) {
+		activeTask = ofxGgmlStableDiffusionTask::LoadModel;
+		setLastError(compatibilityResult.code, compatibilityResult.message);
+		return;
+	}
+
 	if (!beginBackgroundTask(ofxGgmlStableDiffusionTask::LoadModel)) {
 		return;
 	}
 
-	applyContextSettings(settings);
+	applyContextSettings(resolvedSettings);
 	ofxGgmlStableDiffusionThread::ContextTaskData taskData;
 	{
 		std::lock_guard<std::mutex> lock(stateMutex);
@@ -1283,6 +1598,11 @@ void ofxGgmlStableDiffusion::reloadEmbeddings(const std::string& embedDir) {
 	ofxGgmlStableDiffusionContextSettings settings = getContextSettings();
 	if (!embedDir.empty()) {
 		settings.embedDir = embedDir;
+	}
+	if (settings.modelPath.empty() && settings.diffusionModelPath.empty()) {
+		std::lock_guard<std::mutex> lock(stateMutex);
+		embedDirCStr = settings.embedDir;
+		return;
 	}
 	newSdCtx(settings);
 }
@@ -2120,10 +2440,6 @@ void ofxGgmlStableDiffusion::setLastError(const std::string& errorMessage, ofxGg
 		outputImageViews.clear();
 		outputImages = nullptr;
 		diffused = false;
-	}
-
-	if (!errorMessage.empty()) {
-		ofLogError("ofxGgmlStableDiffusion") << errorMessage;
 	}
 }
 

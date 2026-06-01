@@ -167,10 +167,10 @@ for (int i = 0; i < 4; i++) {
 }
 ```
 
-#### 3. Use Lower Precision
+#### 3. Preserve Quantized Model Precision
 ```cpp
-settings.weightType = SD_TYPE_F16;  // Instead of SD_TYPE_F32
-// Reduces memory by ~50% with minimal quality loss
+settings.weightType = SD_TYPE_COUNT;  // Keep each GGUF's stored type
+// Avoids expanding Q8/Q4 models to F16 during context load
 ```
 
 #### 4. Offload to CPU
@@ -742,7 +742,7 @@ ofLogNotice() << "Last seed: " << sd.getLastUsedSeed();
 3. **Check the docs:**
 - [API Reference](API_REFERENCE.md) - Complete API documentation
 - [Migration Guide](MIGRATION_GUIDE.md) - Upgrading from old API
-- [Examples](../examples/) - Working code samples
+- Root-level `ofxGgmlStableDiffusion*Example` folders - Working code samples
 
 4. **Ask for help:**
 - Include error codes and messages

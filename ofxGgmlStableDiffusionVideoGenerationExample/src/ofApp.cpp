@@ -1,0 +1,395 @@
+#include "ofApp.h"
+
+#include <algorithm>
+
+//--------------------------------------------------------------
+void ofApp::setup() {
+	ofSetWindowTitle("ofxGgmlStableDiffusion video generation");
+	ofSetFrameRate(60);
+	ofSetLogLevel(OF_LOG_WARNING);
+
+	prompt = "A cinematic ocean cliff at sunrise, slow camera drift";
+	promptB = "A cinematic ocean cliff at sunset, glowing clouds";
+	negativePrompt = "blurry, low quality, distorted";
+	std::copy(prompt.begin(), prompt.end(), promptInput.begin());
+	std::copy(promptB.begin(), promptB.end(), promptBInput.begin());
+	std::copy(negativePrompt.begin(), negativePrompt.end(), negativePromptInput.begin());
+	statusMessage = "Ready";
+
+	auto window = ofGetCurrentWindow();
+	const auto setupState = gui.setup(window, nullptr, true, ImGuiConfigFlags_None, true);
+	if (!(setupState & ofxImGui::SetupState::Success)) {
+		imGuiOk = false;
+		statusMessage = "ImGui setup failed";
+		return;
+	}
+
+	configureContext();
+	sd.setProgressCallback([this](int step, int steps, float time) {
+		const float value = steps > 0 ? static_cast<float>(step) / static_cast<float>(steps) : 0.0f;
+		progress.store(value);
+	});
+}
+
+//--------------------------------------------------------------
+void ofApp::update() {
+	const bool wasGenerating = generating;
+	generating = sd.isGenerating();
+
+	if (contextLoading && !sd.isBusy()) {
+		contextLoading = false;
+		const auto capabilities = sd.getCapabilities();
+		if (capabilities.imageToVideo) {
+			modelSummary = "Model advertises image-to-video support.";
+			statusMessage = "Model loaded";
+		} else {
+			const auto error = sd.getLastErrorInfo();
+			modelSummary = "Load a WAN/video model before generating.";
+			statusMessage = error.code == ofxGgmlStableDiffusionErrorCode::None ?
+				"Model load failed" :
+				"Error: " + error.message;
+		}
+	}
+
+	if (wasGenerating && !generating) {
+		if (sd.wasCancelled()) {
+			statusMessage = "Video generation cancelled";
+			return;
+		}
+		if (sd.hasVideoResult()) {
+			const int outputCount = sd.getOutputCount();
+			currentFrame = outputCount > 0 ? 0 : -1;
+			if (currentFrame >= 0) {
+				ofPixels pixels;
+				if (sd.copyVideoFramePixels(currentFrame, pixels) && pixels.isAllocated()) {
+					framePreview.setFromPixels(pixels);
+				}
+			}
+			statusMessage = "Video ready: " + ofToString(outputCount) + " frames";
+			return;
+		}
+
+		const auto error = sd.getLastErrorInfo();
+		if (error.code != ofxGgmlStableDiffusionErrorCode::None) {
+			statusMessage = "Error: " + error.message;
+		}
+	}
+}
+
+//--------------------------------------------------------------
+void ofApp::draw() {
+	ofBackground(24);
+	drawFramePreview();
+
+	if (!imGuiOk) {
+		ofSetColor(255);
+		ofDrawBitmapString(statusMessage, 20, 20);
+		return;
+	}
+
+	gui.begin();
+	ImGui::SetNextWindowSize(ImVec2(520.0f, 560.0f), ImGuiCond_Once);
+	if (ImGui::Begin("Video Generation")) {
+		ImGui::TextWrapped("%s", statusMessage.c_str());
+		ImGui::TextWrapped("%s", modelSummary.c_str());
+		if (generating) {
+			ImGui::ProgressBar(progress.load(), ImVec2(-1.0f, 0.0f));
+		}
+		ImGui::Separator();
+
+		if (ImGui::InputTextMultiline("Prompt", promptInput.data(), promptInput.size(), ImVec2(-1.0f, 84.0f))) {
+			syncRequestFromUi();
+		}
+		ImGui::Checkbox("Image-sequence prompt morph", &enablePromptInterpolation);
+		if (enablePromptInterpolation) {
+			if (ImGui::InputTextMultiline("End Prompt", promptBInput.data(), promptBInput.size(), ImVec2(-1.0f, 64.0f))) {
+				syncRequestFromUi();
+			}
+		}
+		if (ImGui::InputTextMultiline("Negative", negativePromptInput.data(), negativePromptInput.size(), ImVec2(-1.0f, 54.0f))) {
+			syncRequestFromUi();
+		}
+		ImGui::Checkbox("Use input image", &useInputImage);
+		if (ImGui::InputText("Image path", imagePathInput.data(), imagePathInput.size())) {
+			syncRequestFromUi();
+		}
+		if (ImGui::Button("Load Image")) {
+			loadInputImage();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Clear Image")) {
+			clearInputImage();
+		}
+		ImGui::Checkbox("Use end frame", &useEndFrame);
+		if (ImGui::InputText("End frame path", endFramePathInput.data(), endFramePathInput.size())) {
+			syncRequestFromUi();
+		}
+		if (ImGui::Button("Load End Frame")) {
+			loadEndFrame();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Clear End Frame")) {
+			clearEndFrame();
+		}
+
+		ImGui::InputInt("Width", &width, 64, 128);
+		ImGui::InputInt("Height", &height, 64, 128);
+		ImGui::SliderInt("Frames", &frameCount, 1, 32);
+		ImGui::SliderInt("FPS", &fps, 1, 30);
+		ImGui::SliderInt("Steps", &sampleSteps, 1, 60);
+		ImGui::SliderFloat("CFG", &cfgScale, 1.0f, 15.0f);
+		ImGui::SliderFloat("Guidance", &guidance, 1.0f, 15.0f);
+		ImGui::SliderFloat("Strength", &strength, 0.0f, 1.0f);
+		ImGui::SliderFloat("Eta", &eta, 0.0f, 1.0f);
+		ImGui::SliderFloat("Flow Shift", &flowShift, 0.0f, 12.0f);
+		ImGui::SliderFloat("MoE Boundary", &moeBoundary, 0.0f, 1.0f);
+		ImGui::SliderFloat("VACE Strength", &vaceStrength, 0.0f, 1.0f);
+		ImGui::InputInt("Seed", &seed);
+		ImGui::Checkbox("Image-sequence seed sweep", &useSeedSequence);
+		if (useSeedSequence) {
+			ImGui::InputInt("Seed Increment", &seedIncrement);
+		}
+
+		const bool busy = sd.isBusy();
+		const bool canGenerate = sd.hasLoadedContext() && !generating && !busy;
+		if (generating) {
+			ImGui::BeginDisabled();
+		}
+		if (!canGenerate) {
+			ImGui::BeginDisabled();
+		}
+		if (ImGui::Button("Generate Video")) {
+			startGeneration();
+		}
+		if (!canGenerate) {
+			ImGui::EndDisabled();
+		}
+		if (generating) {
+			ImGui::EndDisabled();
+		}
+		ImGui::SameLine();
+		if (!generating) {
+			ImGui::BeginDisabled();
+		}
+		if (ImGui::Button("Cancel")) {
+			cancelGeneration();
+		}
+		if (!generating) {
+			ImGui::EndDisabled();
+		}
+
+		const bool hasVideo = sd.hasVideoResult();
+		if (!hasVideo) {
+			ImGui::BeginDisabled();
+		}
+		if (hasVideo) {
+			const int maxFrame = std::max(0, sd.getOutputCount() - 1);
+			if (ImGui::SliderInt("Preview Frame", &currentFrame, 0, maxFrame)) {
+				ofPixels pixels;
+				if (sd.copyVideoFramePixels(currentFrame, pixels) && pixels.isAllocated()) {
+					framePreview.setFromPixels(pixels);
+				}
+			}
+		}
+		if (ImGui::Button("Save Frames")) {
+			saveFrames();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Save Video")) {
+			saveVideo();
+		}
+		if (!hasVideo) {
+			ImGui::EndDisabled();
+		}
+	}
+	ImGui::End();
+	gui.end();
+}
+
+//--------------------------------------------------------------
+void ofApp::syncRequestFromUi() {
+	prompt = ofxGgmlStableDiffusionExampleInputString(promptInput);
+	promptB = ofxGgmlStableDiffusionExampleInputString(promptBInput);
+	negativePrompt = ofxGgmlStableDiffusionExampleInputString(negativePromptInput);
+	imagePath = ofxGgmlStableDiffusionExampleInputString(imagePathInput);
+	endFramePath = ofxGgmlStableDiffusionExampleInputString(endFramePathInput);
+}
+
+//--------------------------------------------------------------
+void ofApp::configureContext() {
+	ofxGgmlStableDiffusionContextSettings settings;
+	settings.modelPath = ofToDataPath("models/video/wan2.1-t2v-1.3b.gguf");
+	settings.weightType = SD_TYPE_COUNT;
+	settings.nThreads = -1;
+	settings.flashAttn = true;
+	sd.configureContext(settings);
+	const auto capabilities = sd.getCapabilities();
+	contextLoading = sd.isBusy();
+	if (contextLoading) {
+		modelSummary = "Loading video model...";
+		statusMessage = "Loading model...";
+	} else {
+		modelSummary = capabilities.imageToVideo ?
+			"Model advertises image-to-video support." :
+			"Load a WAN/video model before generating.";
+		if (!capabilities.imageToVideo) {
+			const auto error = sd.getLastErrorInfo();
+			statusMessage = error.code == ofxGgmlStableDiffusionErrorCode::None ?
+				"Model not loaded" :
+				"Error: " + error.message;
+		}
+	}
+}
+
+//--------------------------------------------------------------
+void ofApp::startGeneration() {
+	if (generating) {
+		return;
+	}
+	if (!sd.hasLoadedContext()) {
+		statusMessage = sd.isBusy() ? "Model is still loading." : "Load a video model before generating.";
+		return;
+	}
+	syncRequestFromUi();
+	if (useInputImage && inputImage.data == nullptr) {
+		statusMessage = "Load an input image or disable Use input image.";
+		return;
+	}
+	if (useEndFrame && endFrame.data == nullptr) {
+		statusMessage = "Load an end frame or disable Use end frame.";
+		return;
+	}
+
+	ofxGgmlStableDiffusionVideoRequest request;
+	request.initImage = useInputImage ? inputImage : sd_image_t{0, 0, 0, nullptr};
+	request.endImage = useEndFrame ? endFrame : sd_image_t{0, 0, 0, nullptr};
+	request.prompt = prompt;
+	request.negativePrompt = negativePrompt;
+	request.width = width;
+	request.height = height;
+	request.frameCount = frameCount;
+	request.fps = fps;
+	request.sampleSteps = sampleSteps;
+	request.cfgScale = cfgScale;
+	request.guidance = guidance;
+	request.strength = strength;
+	request.eta = eta;
+	request.flowShift = flowShift;
+	request.moeBoundary = moeBoundary;
+	request.vaceStrength = vaceStrength;
+	request.seed = seed;
+	if (enablePromptInterpolation && !promptB.empty() && frameCount > 1) {
+		request.animationSettings.enablePromptInterpolation = true;
+		request.animationSettings.promptInterpolationMode =
+			ofxGgmlStableDiffusionInterpolationMode::Smooth;
+		request.animationSettings.promptKeyframes = {
+			{0, prompt},
+			{frameCount - 1, promptB}
+		};
+	}
+	if (useSeedSequence) {
+		request.animationSettings.useSeedSequence = true;
+		request.animationSettings.seedIncrement = seedIncrement;
+	}
+
+	progress.store(0.0f);
+	framePreview.clear();
+	statusMessage = "Generating video...";
+	sd.generateVideo(request);
+}
+
+//--------------------------------------------------------------
+void ofApp::cancelGeneration() {
+	ofxGgmlStableDiffusionExampleRequestCancel(sd, statusMessage);
+}
+
+//--------------------------------------------------------------
+void ofApp::loadInputImage() {
+	syncRequestFromUi();
+	if (!ofxGgmlStableDiffusionExampleLoadImageView(
+		imagePath,
+		width,
+		height,
+		inputImagePreview,
+		inputPixels,
+		inputImage)) {
+		statusMessage = "Input image load failed";
+		return;
+	}
+	useInputImage = true;
+	statusMessage = "Input image loaded";
+}
+
+//--------------------------------------------------------------
+void ofApp::clearInputImage() {
+	inputImagePreview.clear();
+	inputPixels.clear();
+	inputImage = {0, 0, 0, nullptr};
+	useInputImage = false;
+	statusMessage = "Input image cleared";
+}
+
+//--------------------------------------------------------------
+void ofApp::loadEndFrame() {
+	syncRequestFromUi();
+	if (!ofxGgmlStableDiffusionExampleLoadImageView(
+		endFramePath,
+		width,
+		height,
+		endFramePreview,
+		endFramePixels,
+		endFrame)) {
+		statusMessage = "End frame load failed";
+		return;
+	}
+	useEndFrame = true;
+	statusMessage = "End frame loaded";
+}
+
+//--------------------------------------------------------------
+void ofApp::clearEndFrame() {
+	endFramePreview.clear();
+	endFramePixels.clear();
+	endFrame = {0, 0, 0, nullptr};
+	useEndFrame = false;
+	statusMessage = "End frame cleared";
+}
+
+//--------------------------------------------------------------
+void ofApp::saveFrames() {
+	const std::string directory = ofToDataPath(
+		ofGetTimestampString("output/ofxGgmlStableDiffusion-video-%Y-%m-%d-%H-%M-%S"),
+		true);
+	if (sd.saveVideoFramesWithMetadata(directory, "frame", "metadata.json")) {
+		statusMessage = "Saved frames to " + directory;
+	} else {
+		statusMessage = "Save frames failed";
+	}
+}
+
+//--------------------------------------------------------------
+void ofApp::saveVideo() {
+	const std::string path = ofToDataPath(
+		ofGetTimestampString("output/ofxGgmlStableDiffusion-video-%Y-%m-%d-%H-%M-%S.webm"),
+		true);
+	if (sd.saveVideoWebm(path)) {
+		statusMessage = "Saved video to " + path;
+	} else {
+		statusMessage = "Save video failed";
+	}
+}
+
+//--------------------------------------------------------------
+void ofApp::drawFramePreview() {
+	ofxGgmlStableDiffusionExampleDrawImageFit(framePreview);
+}
+
+//--------------------------------------------------------------
+void ofApp::keyPressed(int key) {
+	if (key == ' ') {
+		startGeneration();
+	}
+	if (key == 'c' || key == 'C') {
+		cancelGeneration();
+	}
+}

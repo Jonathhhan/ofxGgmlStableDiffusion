@@ -73,7 +73,7 @@ $addonRoot = (Resolve-Path (Join-Path $scriptRoot "..")).Path
 $testsRoot = Join-Path $addonRoot "tests"
 
 if ([string]::IsNullOrWhiteSpace($BuildDir)) {
-    $BuildDir = Join-Path $testsRoot "build"
+    $BuildDir = Join-Path ([System.IO.Path]::GetTempPath()) "ofxGgmlStableDiffusion-tests-build"
 }
 
 if ($Clean -and (Test-Path -LiteralPath $BuildDir)) {

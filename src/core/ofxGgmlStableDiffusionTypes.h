@@ -61,7 +61,7 @@ struct ofxGgmlStableDiffusionContextSettings {
 	bool vaeTiling = false;
 	bool freeParamsImmediately = true;
 	int nThreads = -1;
-	sd_type_t weightType = SD_TYPE_F16;
+	sd_type_t weightType = SD_TYPE_COUNT;
 	rng_type_t rngType = CUDA_RNG;
 	scheduler_t schedule = SCHEDULER_COUNT;
 	// Model behaviour
@@ -135,7 +135,7 @@ struct ofxGgmlStableDiffusionControlNet {
 struct ofxGgmlStableDiffusionUpscalerSettings {
 	std::string modelPath;
 	int nThreads = -1;
-	sd_type_t weightType = SD_TYPE_F16;
+	sd_type_t weightType = SD_TYPE_COUNT;
 	int multiplier = 4;
 	bool enabled = false;
 };

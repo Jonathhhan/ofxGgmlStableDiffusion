@@ -1,12 +1,16 @@
 # Basic Generation Example
 
-This example demonstrates the simplest way to generate images with ofxGgmlStableDiffusion.
+This example demonstrates an expanded typed image-generation panel for
+ofxGgmlStableDiffusion. For the smallest starter path, begin with
+[`ofxGgmlStableDiffusionExample`](../ofxGgmlStableDiffusionExample/).
 
 ## Features
 
 - Load a Stable Diffusion model
+- Tune the request from an ofxImGui control panel
 - Generate images from text prompts
 - Display progress during generation
+- Cancel an active load or generation
 - Save generated images
 
 ## Usage
@@ -14,8 +18,9 @@ This example demonstrates the simplest way to generate images with ofxGgmlStable
 1. Place a Stable Diffusion model (`.safetensors` or `.ckpt`) in `bin/data/models/`
 2. Update the model path in `ofApp::setup()` if needed
 3. Run the example
-4. Press **SPACE** to generate an image
-5. Press **S** to save the current image
+4. Use the ImGui panel to edit the prompt and generation settings
+5. Click **Generate** to start an image
+6. Click **Cancel** to stop a long-running task, or **Save** to save the current image
 
 ## Code Walkthrough
 
@@ -24,7 +29,7 @@ This example demonstrates the simplest way to generate images with ofxGgmlStable
 ```cpp
 ofxGgmlStableDiffusionContextSettings settings;
 settings.modelPath = ofToDataPath("models/sd_v1.5.safetensors");
-settings.weightType = SD_TYPE_F16;
+settings.weightType = SD_TYPE_COUNT;
 sd.configureContext(settings);
 ```
 
@@ -42,6 +47,8 @@ sd.generate(request);
 ```
 
 Creates a request with desired parameters and starts generation.
+The example keeps the request controls in ofxImGui and still accepts SPACE/S as
+keyboard shortcuts for quick smoke testing.
 
 ### Progress Tracking
 
@@ -69,8 +76,8 @@ Results are available after generation completes.
 
 ## Next Steps
 
-- See [cancellation_example](../cancellation_example/) for cancelling long operations
-- See API Reference for more generation options
+- See [ofxGgmlStableDiffusionImageWorkflowExample](../ofxGgmlStableDiffusionImageWorkflowExample/) for image-to-image, inpainting, and ControlNet workflows
+- See [API Reference](../docs/API_REFERENCE.md) for more generation options
 
 ## Troubleshooting
 
@@ -81,7 +88,7 @@ Results are available after generation completes.
 
 **Out of memory?**
 - Reduce image dimensions (e.g., 512x512)
-- Use `SD_TYPE_F16` instead of `SD_TYPE_F32`
+- Use `SD_TYPE_COUNT` to keep each model's stored weight type unless you need an explicit conversion
 - See [Troubleshooting Guide](../../docs/TROUBLESHOOTING.md#memory-issues)
 
 **Generation too slow?**

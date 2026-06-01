@@ -7,7 +7,13 @@ on:
       - 'README.md'
       - 'src/**'
       - 'docs/**'
-      - 'examples/**'
+      - 'ofxGgmlStableDiffusionExample/**'
+      - 'ofxGgmlStableDiffusionBasicGenerationExample/**'
+      - 'ofxGgmlStableDiffusionImageWorkflowExample/**'
+      - 'ofxGgmlStableDiffusionVideoGenerationExample/**'
+      - 'ofxGgmlStableDiffusionVideoControlFramesExample/**'
+      - 'ofxGgmlStableDiffusionCreativeLoopExample/**'
+      - 'ofxGgmlStableDiffusionLoraEmbeddingExample/**'
       - 'Doxyfile'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
@@ -104,8 +110,13 @@ jobs:
                 <h3>🚀 Quick Start</h3>
                 <ul>
                     <li><a href="https://github.com/Jonathhhan/ofxGgmlStableDiffusion#requirements">Requirements</a></li>
-                    <li><a href="https://github.com/Jonathhhan/ofxGgmlStableDiffusion/tree/main/examples/basic_generation">Basic Generation Example</a></li>
-                    <li><a href="https://github.com/Jonathhhan/ofxGgmlStableDiffusion/tree/main/examples/cancellation_example">Cancellation Example</a></li>
+                    <li><a href="https://github.com/Jonathhhan/ofxGgmlStableDiffusion/tree/main/ofxGgmlStableDiffusionExample">Starter Example</a></li>
+                    <li><a href="https://github.com/Jonathhhan/ofxGgmlStableDiffusion/tree/main/ofxGgmlStableDiffusionBasicGenerationExample">Basic Generation Example</a></li>
+                    <li><a href="https://github.com/Jonathhhan/ofxGgmlStableDiffusion/tree/main/ofxGgmlStableDiffusionImageWorkflowExample">Image Workflow Example</a></li>
+                    <li><a href="https://github.com/Jonathhhan/ofxGgmlStableDiffusion/tree/main/ofxGgmlStableDiffusionVideoGenerationExample">Video Generation Example</a></li>
+                    <li><a href="https://github.com/Jonathhhan/ofxGgmlStableDiffusion/tree/main/ofxGgmlStableDiffusionVideoControlFramesExample">Video Control Frames Example</a></li>
+                    <li><a href="https://github.com/Jonathhhan/ofxGgmlStableDiffusion/tree/main/ofxGgmlStableDiffusionCreativeLoopExample">Creative Loop Example</a></li>
+                    <li><a href="https://github.com/Jonathhhan/ofxGgmlStableDiffusion/tree/main/ofxGgmlStableDiffusionLoraEmbeddingExample">LoRA Embedding Example</a></li>
                 </ul>
             </div>
 

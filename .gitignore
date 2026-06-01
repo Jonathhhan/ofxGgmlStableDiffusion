@@ -28,14 +28,35 @@ ofxGgmlStableDiffusionExample/bin/data/videos/
 ofxGgmlStableDiffusionExample/bin/data/photomaker_images/
 !ofxGgmlStableDiffusionExample/bin/data/models/**/
 !ofxGgmlStableDiffusionExample/bin/data/models/**/.gitkeep
+ofxGgmlStableDiffusion*Example/bin/*.exe
+ofxGgmlStableDiffusion*Example/bin/*.exp
+ofxGgmlStableDiffusion*Example/bin/*.lib
+ofxGgmlStableDiffusion*Example/bin/*.pdb
+ofxGgmlStableDiffusion*Example/bin/imgui.ini
+ofxGgmlStableDiffusion*Example/bin/stable-diffusion.dll
+ofxGgmlStableDiffusion*Example/bin/startup-trace.txt
+ofxGgmlStableDiffusion*Example/bin/libs/
+ofxGgmlStableDiffusion*Example/bin/data/generated/
+ofxGgmlStableDiffusion*Example/bin/data/control_frames/
+ofxGgmlStableDiffusion*Example/bin/data/output/
+ofxGgmlStableDiffusion*Example/bin/data/outputs/
+ofxGgmlStableDiffusion*Example/bin/data/renders/
+ofxGgmlStableDiffusion*Example/bin/data/videos/
+ofxGgmlStableDiffusion*Example/bin/data/models/*
+!ofxGgmlStableDiffusion*Example/bin/data/models/**/
+!ofxGgmlStableDiffusion*Example/bin/data/models/**/.gitkeep
+ofxGgmlStableDiffusion*Example/bin/data/*.png
+ofxGgmlStableDiffusion*Example/bin/data/last_model.txt
 
 # Native staging output
+libs/ggml/
 libs/stable-diffusion/bin/
 libs/stable-diffusion/build/
 libs/stable-diffusion/downloads/
 libs/stable-diffusion/source/
 libs/stable-diffusion/lib/*
 !libs/stable-diffusion/lib/gitkeep
+libs/variants/
 
 # CMake / test output
 Testing/

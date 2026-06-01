@@ -38,12 +38,21 @@ bool ofxGgmlStableDiffusionRealtimeVideoSession::start(
 }
 
 void ofxGgmlStableDiffusionRealtimeVideoSession::stop() {
-	std::lock_guard<std::mutex> lock(mutex_);
-	active_ = false;
-	stats_.isActive = false;
-	generationInFlight_ = false;
-	hasPendingRequest_ = false;
-	refinedActiveRequest_ = false;
+	ofxGgmlStableDiffusion * generator = nullptr;
+	bool generationInFlight = false;
+	{
+		std::lock_guard<std::mutex> lock(mutex_);
+		generator = generator_;
+		generationInFlight = generationInFlight_;
+		active_ = false;
+		stats_.isActive = false;
+		generationInFlight_ = false;
+		hasPendingRequest_ = false;
+		refinedActiveRequest_ = false;
+	}
+	if (generationInFlight && generator != nullptr) {
+		generator->requestCancellation();
+	}
 }
 
 bool ofxGgmlStableDiffusionRealtimeVideoSession::isActive() const {

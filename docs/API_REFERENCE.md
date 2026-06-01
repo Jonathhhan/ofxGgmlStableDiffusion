@@ -312,7 +312,7 @@ dispatch their callbacks from the thread that calls `update()`.
 
 - [Migration Guide](MIGRATION_GUIDE.md) - Upgrading from older versions
 - [Troubleshooting Guide](TROUBLESHOOTING.md) - Common issues and solutions
-- [Examples](examples/) - Code examples
+- Root-level `ofxGgmlStableDiffusion*Example` folders - Code examples
 - [Generated API Docs](api/html/index.html) - Complete API reference
 
 ## Generating Documentation
