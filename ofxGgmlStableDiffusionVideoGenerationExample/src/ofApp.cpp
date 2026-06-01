@@ -240,8 +240,8 @@ void ofApp::draw() {
 
 		ImGui::InputInt("Width", &width, 64, 128);
 		ImGui::InputInt("Height", &height, 64, 128);
-		ImGui::SliderInt("Frames", &frameCount, 1, 32);
-		ImGui::SliderInt("FPS", &fps, 1, 30);
+		ImGui::SliderInt("Frames", &frameCount, 1, 300);
+		ImGui::SliderInt("FPS", &fps, 1, 60);
 		ImGui::SliderInt("Steps", &sampleSteps, 1, 60);
 		ImGui::SliderFloat("CFG", &cfgScale, 1.0f, 15.0f);
 		ImGui::SliderFloat("Guidance", &guidance, 1.0f, 15.0f);
