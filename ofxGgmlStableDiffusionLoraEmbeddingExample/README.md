@@ -1,6 +1,9 @@
 # LoRA Embedding Example
 
 Focused `ofxImGui` example for LoRA adapter stacks and textual-inversion embeddings.
+Use this example when adapter/embedding discovery is the focus. For basic
+prompt and sampler controls without adapter management, use the basic
+generation example.
 
 ## Features
 
@@ -18,4 +21,4 @@ Focused `ofxImGui` example for LoRA adapter stacks and textual-inversion embeddi
 4. Update paths in the panel if needed.
 5. Click **Scan LoRAs**, apply adapters, and click **Generate**.
 
-SPACE starts generation and C requests cancellation.
+SPACE starts generation, and Esc or C requests cancellation.

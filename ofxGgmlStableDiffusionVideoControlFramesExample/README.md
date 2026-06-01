@@ -1,6 +1,8 @@
 # Video Control Frames Example
 
 Focused `ofxImGui` example for VACE-style guided video generation with per-frame control images.
+Use this example when video structure comes from an ordered frame folder. Use
+the plain video example for prompt-only or single-image video generation.
 
 ## Features
 
@@ -22,4 +24,4 @@ Optional environment variables can prefill the paths:
 `OFXGGML_STABLE_DIFFUSION_VACE_MODEL`, `OFXGGML_STABLE_DIFFUSION_TEXT_ENCODER`,
 and `OFXGGML_STABLE_DIFFUSION_VAE`.
 
-SPACE starts generation and C requests cancellation.
+SPACE starts generation, and Esc or C requests cancellation.

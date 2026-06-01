@@ -3,24 +3,28 @@
 This example demonstrates an expanded typed image-generation panel for
 ofxGgmlStableDiffusion. For the smallest starter path, begin with
 [`ofxGgmlStableDiffusionExample`](../ofxGgmlStableDiffusionExample/).
+Use this example when you want the broader image request controls in one panel
+without the workflow-specific image-to-image, video, LoRA, or creative-loop UI.
 
 ## Features
 
-- Load a Stable Diffusion model
+- Browse for and load a Stable Diffusion image model
 - Tune the request from an ofxImGui control panel
-- Generate images from text prompts
+- Generate text-to-image, image-to-image, and inpainting requests
 - Display progress during generation
 - Cancel an active load or generation
 - Save generated images
 
 ## Usage
 
-1. Place a Stable Diffusion model (`.safetensors` or `.ckpt`) in `bin/data/models/`
-2. Update the model path in `ofApp::setup()` if needed
+1. Place a Stable Diffusion model (`.safetensors`, `.gguf`, or `.ggml`) in `bin/data/models/`
+2. Load or browse to the model from the panel
 3. Run the example
 4. Use the ImGui panel to edit the prompt and generation settings
 5. Click **Generate** to start an image
 6. Click **Cancel** to stop a long-running task, or **Save** to save the current image
+
+SPACE starts generation, Esc or C requests cancellation, and S saves the current image.
 
 ## Code Walkthrough
 
@@ -47,7 +51,7 @@ sd.generate(request);
 ```
 
 Creates a request with desired parameters and starts generation.
-The example keeps the request controls in ofxImGui and still accepts SPACE/S as
+The example keeps the request controls in ofxImGui and still accepts SPACE/Esc/C/S as
 keyboard shortcuts for quick smoke testing.
 
 ### Progress Tracking
@@ -84,14 +88,14 @@ Results are available after generation completes.
 **Model won't load?**
 - Verify the model path exists
 - Check the model format (`.safetensors` recommended)
-- See [Troubleshooting Guide](../../docs/TROUBLESHOOTING.md#model-loading-issues)
+- See [Troubleshooting Guide](../docs/TROUBLESHOOTING.md#model-loading-issues)
 
 **Out of memory?**
 - Reduce image dimensions (e.g., 512x512)
 - Use `SD_TYPE_COUNT` to keep each model's stored weight type unless you need an explicit conversion
-- See [Troubleshooting Guide](../../docs/TROUBLESHOOTING.md#memory-issues)
+- See [Troubleshooting Guide](../docs/TROUBLESHOOTING.md#memory-issues)
 
 **Generation too slow?**
 - Enable Flash Attention: `settings.flashAttn = true;`
 - Reduce sample steps: `request.sampleSteps = 15;`
-- See [Troubleshooting Guide](../../docs/TROUBLESHOOTING.md#performance-issues)
+- See [Troubleshooting Guide](../docs/TROUBLESHOOTING.md#performance-issues)

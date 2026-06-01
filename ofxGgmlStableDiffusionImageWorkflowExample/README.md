@@ -1,6 +1,8 @@
 # Image Workflow Example
 
 Focused `ofxImGui` example for typed image workflows beyond basic text-to-image.
+Use this example when the interesting part is the source image, mask, or
+ControlNet guide image rather than the full parameter surface.
 
 ## Features
 
@@ -18,4 +20,4 @@ Focused `ofxImGui` example for typed image workflows beyond basic text-to-image.
 4. Run the example.
 5. Choose the workflow mode and click **Generate**.
 
-SPACE starts generation and C requests cancellation.
+SPACE starts generation, and Esc or C requests cancellation.

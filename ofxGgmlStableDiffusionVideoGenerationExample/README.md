@@ -1,6 +1,9 @@
 # Video Generation Example
 
 Focused `ofxImGui` example for the typed `generateVideo()` surface.
+Use this example for direct text-to-video or image-to-video with WAN-style
+model components. Use the control-frames example when each frame needs an
+external guide image.
 
 ## Features
 
@@ -26,4 +29,4 @@ Optional environment variables can prefill the paths:
 `OFXGGML_STABLE_DIFFUSION_VIDEO_MODEL`, `OFXGGML_STABLE_DIFFUSION_TEXT_ENCODER`,
 and `OFXGGML_STABLE_DIFFUSION_VAE`.
 
-SPACE starts generation and C requests cancellation.
+SPACE starts generation, and Esc or C requests cancellation.

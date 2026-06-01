@@ -1,6 +1,8 @@
 # Creative Loop Example
 
 Focused `ofxImGui` example for `ofxGgmlStableDiffusionRealtimeVideoSession`.
+Use this example for repeated prompt updates and preview/refine feedback loops,
+not for a single final still image or WAN video render.
 
 ## Features
 
@@ -18,4 +20,4 @@ Focused `ofxImGui` example for `ofxGgmlStableDiffusionRealtimeVideoSession`.
 4. Click **Start Loop**.
 5. Edit the prompt and click **Send Prompt**.
 
-SPACE sends the current prompt and C clears the feedback frame.
+SPACE sends the current prompt, Esc or C stops the loop, and F clears the feedback frame.
