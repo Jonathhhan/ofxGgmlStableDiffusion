@@ -17,7 +17,7 @@ without the workflow-specific image-to-image, video, LoRA, or creative-loop UI.
 
 ## Usage
 
-1. Place a Stable Diffusion model (`.safetensors`, `.gguf`, or `.ggml`) in `bin/data/models/`
+1. Place a Stable Diffusion model (`.safetensors`, `.ckpt`, `.gguf`, or `.ggml`) in `bin/data/models/`
 2. Load or browse to the model from the panel
 3. Run the example
 4. Use the ImGui panel to edit the prompt and generation settings
@@ -28,16 +28,20 @@ SPACE starts generation, Esc or C requests cancellation, and S saves the current
 
 ## Code Walkthrough
 
-### Setup (ofApp::setup)
+### Load Model
 
 ```cpp
+const std::string lastModelPath = loadSavedModelPath();
+loadModel(lastModelPath.empty() ? ofToDataPath("models/sd_v1.5.safetensors") : lastModelPath);
+
 ofxGgmlStableDiffusionContextSettings settings;
-settings.modelPath = ofToDataPath("models/sd_v1.5.safetensors");
+settings.modelPath = modelPath;
 settings.weightType = SD_TYPE_COUNT;
 sd.configureContext(settings);
 ```
 
-This loads the model and configures the generation context.
+The example starts from the last successful model path when available, and the
+panel can browse to a new model path before calling `configureContext()`.
 
 ### Generate (keyPressed)
 

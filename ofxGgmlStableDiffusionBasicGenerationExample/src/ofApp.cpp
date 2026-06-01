@@ -59,17 +59,29 @@ std::string displayFileName(const std::string& path) {
     return path.substr(slash + 1);
 }
 
-bool isSupportedModelPath(const std::string& path) {
+std::string lowerExtension(const std::string& path) {
     const std::size_t dot = path.find_last_of('.');
     if (dot == std::string::npos) {
-        return false;
+        return "";
     }
 
     std::string extension = path.substr(dot + 1);
     std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) {
         return static_cast<char>(std::tolower(c));
     });
-    return extension == "safetensors" || extension == "gguf" || extension == "ggml";
+    return extension;
+}
+
+bool isSupportedModelPath(const std::string& path) {
+    const std::string extension = lowerExtension(path);
+    return extension == "safetensors" || extension == "ckpt" ||
+        extension == "gguf" || extension == "ggml";
+}
+
+bool isSupportedLoraPath(const std::string& path) {
+    const std::string extension = lowerExtension(path);
+    return extension == "safetensors" || extension == "ckpt" ||
+        extension == "pt" || extension == "bin";
 }
 
 ofxGgmlStableDiffusionImageMode imageModeFromIndex(int index) {
@@ -444,14 +456,14 @@ void ofApp::loadModel(const std::string& path) {
 
 //--------------------------------------------------------------
 void ofApp::browseForModel() {
-    ofFileDialogResult result = ofSystemLoadDialog("Select Stable Diffusion model (.safetensors, .gguf, .ggml)");
+    ofFileDialogResult result = ofSystemLoadDialog("Select Stable Diffusion model (.safetensors, .ckpt, .gguf, .ggml)");
     if (!result.bSuccess) {
         return;
     }
 
     const std::string selectedPath = result.getPath();
     if (!isSupportedModelPath(selectedPath)) {
-        statusMessage = "Choose a .safetensors, .gguf, or .ggml model";
+        statusMessage = "Choose a .safetensors, .ckpt, .gguf, or .ggml model";
         return;
     }
 
@@ -484,14 +496,14 @@ void ofApp::browseForControlImage() {
 
 //--------------------------------------------------------------
 void ofApp::browseForLora() {
-    ofFileDialogResult result = ofSystemLoadDialog("Select LoRA (.safetensors, .gguf, .ggml)");
+    ofFileDialogResult result = ofSystemLoadDialog("Select LoRA (.safetensors, .ckpt, .pt, .bin)");
     if (!result.bSuccess) {
         return;
     }
 
     const std::string selectedPath = result.getPath();
-    if (!isSupportedModelPath(selectedPath)) {
-        statusMessage = "Choose a .safetensors, .gguf, or .ggml LoRA";
+    if (!isSupportedLoraPath(selectedPath)) {
+        statusMessage = "Choose a .safetensors, .ckpt, .pt, or .bin LoRA";
         return;
     }
 

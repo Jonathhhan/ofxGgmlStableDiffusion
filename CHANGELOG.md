@@ -17,6 +17,7 @@
 
 - Default stable-diffusion.cpp vendoring is pinned to upstream release `master-666-7948df8` (published 2026-06-01) for compatibility stability.
 - Example keyboard cancellation is consistent across the starter, image, LoRA, creative-loop, and video examples.
+- BasicGeneration accepts legacy `.ckpt` model paths and uses LoRA-specific adapter extension checks.
 
 ## 1.2.0 - 2026-04-17
 
