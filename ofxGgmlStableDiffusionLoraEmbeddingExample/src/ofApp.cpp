@@ -372,7 +372,7 @@ void ofApp::keyPressed(int key) {
 	if (key == ' ') {
 		startGeneration();
 	}
-	if (key == 'c' || key == 'C') {
+	if (key == 27 || key == 'c' || key == 'C') {
 		cancelGeneration();
 	}
 }

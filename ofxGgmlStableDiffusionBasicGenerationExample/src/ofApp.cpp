@@ -1,4 +1,5 @@
 #include "ofApp.h"
+#include "ofxGgmlStableDiffusionExampleHelpers.h"
 
 #include <algorithm>
 #include <cctype>
@@ -69,20 +70,6 @@ bool isSupportedModelPath(const std::string& path) {
         return static_cast<char>(std::tolower(c));
     });
     return extension == "safetensors" || extension == "gguf" || extension == "ggml";
-}
-
-sd_image_t imageView(ofImage& image) {
-    if (!image.isAllocated()) {
-        return {0, 0, 0, nullptr};
-    }
-
-    ofPixels& pixels = image.getPixels();
-    return {
-        static_cast<uint32_t>(pixels.getWidth()),
-        static_cast<uint32_t>(pixels.getHeight()),
-        static_cast<uint32_t>(pixels.getNumChannels()),
-        pixels.getData()
-    };
 }
 
 ofxGgmlStableDiffusionImageMode imageModeFromIndex(int index) {
@@ -571,8 +558,8 @@ void ofApp::startGeneration() {
     ofxGgmlStableDiffusionImageRequest request;
     request.mode = imageModeFromIndex(imageModeIndex);
     request.selectionMode = selectionModeFromIndex(selectionModeIndex);
-    request.initImage = inputImage.isAllocated() ? imageView(inputImage) : sd_image_t{0, 0, 0, nullptr};
-    request.maskImage = maskImage.isAllocated() ? imageView(maskImage) : sd_image_t{0, 0, 0, nullptr};
+    request.initImage = inputImage.isAllocated() ? ofxGgmlStableDiffusionExampleImageView(inputImage.getPixels()) : sd_image_t{0, 0, 0, nullptr};
+    request.maskImage = maskImage.isAllocated() ? ofxGgmlStableDiffusionExampleImageView(maskImage.getPixels()) : sd_image_t{0, 0, 0, nullptr};
     request.prompt = prompt;
     request.negativePrompt = negativePrompt;
     request.clipSkip = clipSkip;
@@ -590,7 +577,7 @@ void ofApp::startGeneration() {
     request.batchCount = batchCount;
     sd_image_t controlImageView{0, 0, 0, nullptr};
     if (controlImage.isAllocated()) {
-        controlImageView = imageView(controlImage);
+        controlImageView = ofxGgmlStableDiffusionExampleImageView(controlImage.getPixels());
         request.controlCond = &controlImageView;
         request.controlStrength = controlStrength;
     }
@@ -608,10 +595,7 @@ void ofApp::startGeneration() {
 
 //--------------------------------------------------------------
 void ofApp::cancelGeneration() {
-    if (sd.requestCancellation()) {
-        statusMessage = "Cancellation requested...";
-        ofLogNotice() << statusMessage;
-    }
+    ofxGgmlStableDiffusionExampleRequestCancel(sd, statusMessage, "Cancellation requested...");
 }
 
 //--------------------------------------------------------------

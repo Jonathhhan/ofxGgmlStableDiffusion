@@ -284,10 +284,10 @@ void ofApp::keyPressed(int key) {
 	if (key == ' ') {
 		submitPrompt();
 	}
-	if (key == 27) {
+	if (key == 27 || key == 'c' || key == 'C') {
 		stopLoop();
 	}
-	if (key == 'c' || key == 'C') {
+	if (key == 'f' || key == 'F') {
 		clearFeedback();
 	}
 }
