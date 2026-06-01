@@ -19,6 +19,7 @@ public:
 private:
 	void syncRequestFromUi();
 	void configureContext();
+	void browseModelPath(std::string& path, std::array<char, 512>& input);
 	void startGeneration();
 	void cancelGeneration();
 	bool loadImageSlot(const std::string& path, ofImage& image, ofPixels& pixels, sd_image_t& view);
@@ -46,11 +47,15 @@ private:
 	sd_image_t controlImage{0, 0, 0, nullptr};
 	std::array<char, 512> promptInput{};
 	std::array<char, 512> negativePromptInput{};
+	std::array<char, 512> modelPathInput{};
+	std::array<char, 512> controlNetPathInput{};
 	std::array<char, 512> inputPathInput{};
 	std::array<char, 512> maskPathInput{};
 	std::array<char, 512> controlPathInput{};
 	std::string prompt;
 	std::string negativePrompt;
+	std::string modelPath;
+	std::string controlNetPath;
 	std::string inputPath;
 	std::string maskPath;
 	std::string controlPath;

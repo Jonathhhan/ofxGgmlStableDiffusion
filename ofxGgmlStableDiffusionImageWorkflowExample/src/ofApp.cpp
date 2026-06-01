@@ -18,8 +18,12 @@ void ofApp::setup() {
 
 	prompt = "A cinematic portrait, soft light, detailed";
 	negativePrompt = "blurry, low quality, distorted";
-	std::copy(prompt.begin(), prompt.end(), promptInput.begin());
-	std::copy(negativePrompt.begin(), negativePrompt.end(), negativePromptInput.begin());
+	modelPath = ofToDataPath("models/sd_v1.5.safetensors");
+	controlNetPath = ofToDataPath("models/controlnet/control.safetensors");
+	ofxGgmlStableDiffusionExampleCopyToInput(prompt, promptInput);
+	ofxGgmlStableDiffusionExampleCopyToInput(negativePrompt, negativePromptInput);
+	ofxGgmlStableDiffusionExampleCopyToInput(modelPath, modelPathInput);
+	ofxGgmlStableDiffusionExampleCopyToInput(controlNetPath, controlNetPathInput);
 	statusMessage = "Ready";
 
 	auto window = ofGetCurrentWindow();
@@ -97,6 +101,32 @@ void ofApp::draw() {
 		}
 		ImGui::Separator();
 
+		if (ImGui::InputText("Model", modelPathInput.data(), modelPathInput.size())) {
+			syncRequestFromUi();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Browse##model")) {
+			browseModelPath(modelPath, modelPathInput);
+		}
+		if (ImGui::InputText("ControlNet model", controlNetPathInput.data(), controlNetPathInput.size())) {
+			syncRequestFromUi();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Browse##controlnet")) {
+			browseModelPath(controlNetPath, controlNetPathInput);
+		}
+		const bool busy = sd.isBusy();
+		if (busy) {
+			ImGui::BeginDisabled();
+		}
+		if (ImGui::Button("Configure Context")) {
+			configureContext();
+		}
+		if (busy) {
+			ImGui::EndDisabled();
+		}
+		ImGui::Separator();
+
 		ImGui::Text("Mode: %s", imageModeLabels[modeIndex]);
 		if (ImGui::Button("TextToImage")) {
 			modeIndex = 0;
@@ -171,7 +201,6 @@ void ofApp::draw() {
 		ImGui::InputInt("Seed", &seed);
 		ImGui::SliderInt("Batch", &batchCount, 1, 8);
 
-		const bool busy = sd.isBusy();
 		const bool canGenerate = sd.hasLoadedContext() && !generating && !busy;
 		if (generating) {
 			ImGui::BeginDisabled();
@@ -218,6 +247,8 @@ void ofApp::draw() {
 void ofApp::syncRequestFromUi() {
 	prompt = ofxGgmlStableDiffusionExampleInputString(promptInput);
 	negativePrompt = ofxGgmlStableDiffusionExampleInputString(negativePromptInput);
+	modelPath = ofxGgmlStableDiffusionExampleInputString(modelPathInput);
+	controlNetPath = ofxGgmlStableDiffusionExampleInputString(controlNetPathInput);
 	inputPath = ofxGgmlStableDiffusionExampleInputString(inputPathInput);
 	maskPath = ofxGgmlStableDiffusionExampleInputString(maskPathInput);
 	controlPath = ofxGgmlStableDiffusionExampleInputString(controlPathInput);
@@ -225,11 +256,13 @@ void ofApp::syncRequestFromUi() {
 
 //--------------------------------------------------------------
 void ofApp::configureContext() {
+	syncRequestFromUi();
 	ofxGgmlStableDiffusionContextSettings settings;
-	settings.modelPath = ofToDataPath("models/sd_v1.5.safetensors");
-	const std::string defaultControlNetPath = ofToDataPath("models/controlnet/control.safetensors");
-	if (ofFile::doesFileExist(defaultControlNetPath)) {
-		settings.controlNetPath = defaultControlNetPath;
+	settings.modelPath = ofxGgmlStableDiffusionExampleResolveReadablePath(modelPath);
+	const std::string resolvedControlNetPath =
+		ofxGgmlStableDiffusionExampleResolveReadablePath(controlNetPath);
+	if (ofFile::doesFileExist(resolvedControlNetPath)) {
+		settings.controlNetPath = resolvedControlNetPath;
 	}
 	settings.weightType = SD_TYPE_COUNT;
 	settings.nThreads = -1;
@@ -251,6 +284,17 @@ void ofApp::configureContext() {
 				"Error: " + error.message;
 		}
 	}
+}
+
+//--------------------------------------------------------------
+void ofApp::browseModelPath(std::string& path, std::array<char, 512>& input) {
+	ofFileDialogResult result = ofSystemLoadDialog("Select model file");
+	if (!result.bSuccess) {
+		return;
+	}
+	path = result.getPath();
+	ofxGgmlStableDiffusionExampleCopyToInput(path, input);
+	statusMessage = "Selected model path";
 }
 
 //--------------------------------------------------------------

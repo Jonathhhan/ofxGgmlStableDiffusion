@@ -6,6 +6,7 @@
 
 - Example READMEs clarify each example's lane and shared keyboard shortcuts.
 - BasicGeneration accepts legacy `.ckpt` model paths and uses LoRA-specific adapter extension checks.
+- ImageWorkflow exposes image-model and ControlNet model paths from the panel.
 
 ## 1.0.2 - 2026-06-02
 
