@@ -491,4 +491,5 @@ inline ofAppBaseWindowPtr ofGetCurrentWindow() {
 }
 
 inline void ofRunApp(const ofAppBaseWindowPtr&, const std::shared_ptr<ofBaseApp>&) {}
-inline void ofRunMainLoop() {}
+inline int ofRunMainLoop() { return 0; }
+inline void ofExit(int = 0) {}

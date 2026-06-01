@@ -34,6 +34,7 @@ ofxGgmlStableDiffusion*Example/bin/*.lib
 ofxGgmlStableDiffusion*Example/bin/*.pdb
 ofxGgmlStableDiffusion*Example/bin/imgui.ini
 ofxGgmlStableDiffusion*Example/bin/stable-diffusion.dll
+ofxGgmlStableDiffusion*Example/bin/stable-diffusion.dll.ofxggml.bak
 ofxGgmlStableDiffusion*Example/bin/startup-trace.txt
 ofxGgmlStableDiffusion*Example/bin/libs/
 ofxGgmlStableDiffusion*Example/bin/data/generated/

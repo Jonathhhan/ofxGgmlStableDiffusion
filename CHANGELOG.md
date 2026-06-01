@@ -15,7 +15,7 @@
 
 ### Changed
 
-- Default stable-diffusion.cpp vendoring is pinned to upstream release `master-585-44cca3d` (published 2026-04-19) for compatibility stability.
+- Default stable-diffusion.cpp vendoring is pinned to upstream release `master-666-7948df8` (published 2026-06-01) for compatibility stability.
 
 ## 1.2.0 - 2026-04-17
 

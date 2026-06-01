@@ -103,6 +103,7 @@ int main() {
 	expectContains(docsWorkflow, "Starter Example", docsWorkflowPath);
 	expectContains(readme, "Current addon version: `1.0.1`", readmePath);
 	expectContains(readme, "run-stable-diffusion-runtime-smoke.ps1", readmePath);
+	expectContains(readme, "run-wan-context-smoke.ps1", readmePath);
 	expectContains(apiReference, "`weightType` - Weight precision type", apiRefPath);
 	expectContains(apiReference, "Generator-backed experimentation surface", apiRefPath);
 	expectContains(apiReference, "ofxGgmlStableDiffusionCreativeWorkflow", apiRefPath);
@@ -133,6 +134,7 @@ int main() {
 	expectContains(videoApp, "settings.diffusionModelPath", videoAppPath);
 	expectContains(videoApp, "settings.t5xxlPath", videoAppPath);
 	expectContains(videoApp, "settings.vaePath", videoAppPath);
+	expectContains(videoApp, "OFXGGML_STABLE_DIFFUSION_CONTEXT_SMOKE", videoAppPath);
 	expectContains(videoApp, "gui.begin()", videoAppPath);
 	expectContains(videoControlApp, "controlFrames", videoControlAppPath);
 	expectContains(videoControlApp, "vaceStrength", videoControlAppPath);

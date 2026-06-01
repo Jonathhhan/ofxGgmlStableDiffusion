@@ -27,7 +27,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$DefaultSourceReleaseTag = "master-572-1b4e9be"
+$DefaultSourceReleaseTag = "master-666-7948df8"
 
 function Write-Step {
     param([string]$Message)
@@ -48,9 +48,96 @@ function Invoke-External {
         [string[]]$Arguments
     )
 
+    $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $startInfo.FileName = $FilePath
+    $startInfo.Arguments = Join-ProcessArguments -Arguments $Arguments
+    $startInfo.WorkingDirectory = (Get-Location).Path
+    $startInfo.UseShellExecute = $false
+
+    Copy-SanitizedProcessEnvironment -StartInfo $startInfo
+
+    $process = [System.Diagnostics.Process]::Start($startInfo)
+    $process.WaitForExit()
+    if ($process.ExitCode -ne 0) {
+        throw "Command failed with exit code $($process.ExitCode): $FilePath $($Arguments -join ' ')"
+    }
+}
+
+function Invoke-ExternalInCurrentShell {
+    param(
+        [string]$FilePath,
+        [string[]]$Arguments
+    )
+
     & $FilePath @Arguments
     if ($LASTEXITCODE -ne 0) {
         throw "Command failed with exit code ${LASTEXITCODE}: $FilePath $($Arguments -join ' ')"
+    }
+}
+
+function Invoke-MSBuildFreshPowerShell {
+    param(
+        [string]$MSBuildPath,
+        [string[]]$Arguments
+    )
+
+    $powershell = Get-CommandPathOrNull 'powershell.exe'
+    if (-not $powershell) {
+        $powershell = Get-CommandPathOrNull 'powershell'
+    }
+    if (-not $powershell) {
+        throw "powershell.exe was not found; cannot launch isolated MSBuild process."
+    }
+
+    $quoted = @($MSBuildPath) + $Arguments | ForEach-Object {
+        "'" + ([string]$_ -replace "'", "''") + "'"
+    }
+    $command = '& ' + ($quoted -join ' ')
+    Invoke-External -FilePath $powershell -Arguments @(
+        '-NoProfile',
+        '-ExecutionPolicy', 'Bypass',
+        '-Command', $command
+    )
+}
+
+function Join-ProcessArguments {
+    param([string[]]$Arguments)
+
+    return (($Arguments | ForEach-Object {
+        if ($_ -notmatch '[\s"]') {
+            $_
+        } else {
+            '"' + ($_ -replace '"', '\"') + '"'
+        }
+    }) -join ' ')
+}
+
+function Copy-SanitizedProcessEnvironment {
+    param([System.Diagnostics.ProcessStartInfo]$StartInfo)
+
+    $environment = $StartInfo.Environment
+    if ($null -eq $environment) {
+        $environment = $StartInfo.EnvironmentVariables
+    }
+    if ($null -eq $environment) {
+        throw "ProcessStartInfo did not expose a mutable environment dictionary."
+    }
+
+    $environment.Clear()
+    $seen = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+    $pathValue = $env:Path
+
+    foreach ($key in [Environment]::GetEnvironmentVariables('Process').Keys) {
+        if ([string]::Equals([string]$key, 'Path', [System.StringComparison]::OrdinalIgnoreCase)) {
+            continue
+        }
+        if ($seen.Add([string]$key)) {
+            $environment[[string]$key] = [Environment]::GetEnvironmentVariable([string]$key, 'Process')
+        }
+    }
+
+    if (-not [string]::IsNullOrEmpty($pathValue)) {
+        $environment['Path'] = $pathValue
     }
 }
 
@@ -404,6 +491,31 @@ function Require-GitPath {
     return $git
 }
 
+function Require-MSBuildPath {
+    $msbuild = Get-CommandPathOrNull 'MSBuild.exe'
+    if ($msbuild) {
+        return $msbuild
+    }
+
+    $candidates = @(
+        "${env:ProgramFiles}\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\amd64\MSBuild.exe",
+        "${env:ProgramFiles}\Microsoft Visual Studio\18\Professional\MSBuild\Current\Bin\amd64\MSBuild.exe",
+        "${env:ProgramFiles}\Microsoft Visual Studio\18\Enterprise\MSBuild\Current\Bin\amd64\MSBuild.exe",
+        "${env:ProgramFiles}\Microsoft Visual Studio\18\BuildTools\MSBuild\Current\Bin\amd64\MSBuild.exe",
+        "${env:ProgramFiles}\Microsoft Visual Studio\17\Community\MSBuild\Current\Bin\amd64\MSBuild.exe",
+        "${env:ProgramFiles}\Microsoft Visual Studio\17\Professional\MSBuild\Current\Bin\amd64\MSBuild.exe",
+        "${env:ProgramFiles}\Microsoft Visual Studio\17\Enterprise\MSBuild\Current\Bin\amd64\MSBuild.exe",
+        "${env:ProgramFiles}\Microsoft Visual Studio\17\BuildTools\MSBuild\Current\Bin\amd64\MSBuild.exe"
+    )
+    foreach ($candidate in $candidates) {
+        if ($candidate -and (Test-Path -LiteralPath $candidate -PathType Leaf)) {
+            return $candidate
+        }
+    }
+
+    throw "MSBuild.exe was not found. Install Visual Studio Build Tools or pass a non-Visual Studio CMake generator."
+}
+
 function Get-ReleaseMetadata {
     param([string]$Tag)
 
@@ -413,7 +525,12 @@ function Get-ReleaseMetadata {
     }
 
     $escapedTag = [System.Uri]::EscapeDataString($Tag)
-    return Invoke-GitHubJsonRequest -Uri ($repoApiBase + '/tags/' + $escapedTag)
+    try {
+        return Invoke-GitHubJsonRequest -Uri ($repoApiBase + '/tags/' + $escapedTag)
+    } catch {
+        Write-Warning ("GitHub release metadata was unavailable for {0}; cloning the tag directly. {1}" -f $Tag, $_.Exception.Message)
+        return New-DryRunReleaseMetadata -Tag $Tag -Repository 'https://github.com/leejet/stable-diffusion.cpp'
+    }
 }
 
 function New-DryRunReleaseMetadata {
@@ -439,7 +556,12 @@ function Get-GgmlReleaseMetadata {
     }
 
     $escapedTag = [System.Uri]::EscapeDataString($Tag)
-    return Invoke-GitHubJsonRequest -Uri ($repoApiBase + '/tags/' + $escapedTag)
+    try {
+        return Invoke-GitHubJsonRequest -Uri ($repoApiBase + '/tags/' + $escapedTag)
+    } catch {
+        Write-Warning ("GitHub release metadata was unavailable for ggml {0}; cloning the tag directly. {1}" -f $Tag, $_.Exception.Message)
+        return New-DryRunReleaseMetadata -Tag $Tag -Repository 'https://github.com/ggml-org/ggml'
+    }
 }
 
 function Remove-DirectoryContents {
@@ -507,6 +629,13 @@ function Refresh-GgmlVendorTree {
         [string]$TargetDir,
         [switch]$DryRun
     )
+
+    if ([string]::IsNullOrWhiteSpace($Tag)) {
+        Write-Step "Using ggml submodule pinned by stable-diffusion.cpp"
+        Write-Host ("    Source dir: {0}" -f $TargetDir)
+        Write-Host "    Pass -GgmlReleaseTag to override this with a separate ggml release."
+        return
+    }
 
     $releaseMetadata = if ($DryRun) {
         New-DryRunReleaseMetadata -Tag $Tag -Repository 'https://github.com/ggml-org/ggml'
@@ -654,11 +783,24 @@ function Apply-GgufExtraDimensionFoldPatch {
                 info.t.ne[GGML_MAX_DIMS - 1] *= folded_dims;
             }
 '@
-    if (-not $content.Contains($old)) {
-        throw "Could not apply GGUF dimension compatibility patch. The gguf.cpp tensor-shape block did not match the expected upstream layout."
+    if ($content.Contains($old)) {
+        [System.IO.File]::WriteAllText($ggufPath, $content.Replace($old, $new))
+        return
     }
 
-    [System.IO.File]::WriteAllText($ggufPath, $content.Replace($old, $new))
+    $oldLf = $old -replace "`r`n", "`n"
+    if ($content.Contains($oldLf)) {
+        $newLf = $new -replace "`r`n", "`n"
+        [System.IO.File]::WriteAllText($ggufPath, $content.Replace($oldLf, $newLf))
+        return
+    }
+
+    $shapeBlockPattern = '(?s)            if \(n_dims > GGML_MAX_DIMS\) \{.*?            \}\r?\n\r?\n(?=            // check that the total number of elements is representable)'
+    $updated = [System.Text.RegularExpressions.Regex]::Replace($content, $shapeBlockPattern, $new + [Environment]::NewLine, 1)
+    if ($updated -eq $content) {
+        throw "Could not apply GGUF dimension compatibility patch. The gguf.cpp tensor-shape block did not match the expected upstream layout."
+    }
+    [System.IO.File]::WriteAllText($ggufPath, $updated)
 }
 
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -1080,17 +1222,61 @@ if ($DryRun) {
     Invoke-External -FilePath $cmake -Arguments $configureArgs
 }
 
+$useVisualStudioBuild = (Test-IsWindowsHost) -and ([string]::IsNullOrWhiteSpace($Generator) -or $Generator -like 'Visual Studio*')
 $buildArgs = @(
     '--build', $BuildDir,
     '--config', $Configuration,
     '--parallel', $Jobs
 )
+$msbuild = $null
+$msbuildArgs = @()
+if ($useVisualStudioBuild) {
+    $msbuild = Require-MSBuildPath
+    $msbuildArgs = @(
+        (Join-Path $BuildDir 'ALL_BUILD.vcxproj'),
+        "/p:Configuration=$Configuration",
+        '/p:Platform=x64',
+        '/m:1',
+        '/nr:false',
+        '/v:m',
+        '/p:TrackFileAccess=false',
+        '/p:UseMultiToolTask=false'
+    )
+}
 
 Write-Step "Building stable-diffusion ($Configuration)"
 if ($DryRun) {
-    Write-Host "$cmake $($buildArgs -join ' ')"
+    if ($useVisualStudioBuild) {
+        Write-Host "$msbuild $($msbuildArgs -join ' ')"
+    } else {
+        Write-Host "$cmake $($buildArgs -join ' ')"
+    }
 } else {
-    Invoke-External -FilePath $cmake -Arguments $buildArgs
+    if ($useVisualStudioBuild) {
+        $msbuildFailure = $null
+        try {
+            Invoke-MSBuildFreshPowerShell -MSBuildPath $msbuild -Arguments $msbuildArgs
+        } catch {
+            Write-Warning ("MSBuild failed on the first attempt; retrying once. {0}" -f $_.Exception.Message)
+            Start-Sleep -Seconds 1
+            try {
+                Invoke-MSBuildFreshPowerShell -MSBuildPath $msbuild -Arguments $msbuildArgs
+            } catch {
+                $msbuildFailure = $_.Exception.Message
+            }
+        }
+        if ($msbuildFailure) {
+            $existingDllPath = Find-FirstFile -Root $BuildDir -Names @('stable-diffusion.dll')
+            $existingLibPath = Find-FirstFile -Root $BuildDir -Names @('stable-diffusion.lib')
+            if ($existingDllPath -and $existingLibPath) {
+                Write-Warning ("MSBuild returned an error after producing stable-diffusion artifacts; continuing with existing build outputs. {0}" -f $msbuildFailure)
+            } else {
+                throw $msbuildFailure
+            }
+        }
+    } else {
+        Invoke-External -FilePath $cmake -Arguments $buildArgs
+    }
 }
 
 if ($DryRun) {

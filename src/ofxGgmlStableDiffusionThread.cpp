@@ -401,7 +401,9 @@ void ofxGgmlStableDiffusionThread::threadedFunction() {
 				false,
 				false,
 				contextTaskData.upscalerSettings.nThreads,
-				0);
+				0,
+				nullptr,
+				nullptr);
 			isUpscalerCtxLoaded = (upscalerCtx != nullptr);
 		}
 		isSdCtxLoaded.store(sdCtx != nullptr, std::memory_order_release);
@@ -717,12 +719,20 @@ void ofxGgmlStableDiffusionThread::threadedFunction() {
 			<< resolvedVideoSummary;
 		int generatedFrameCount = 0;
 		sd_image_t* output = nullptr;
+		sd_audio_t* audio = nullptr;
 		{
 			ProgressCallbackGuard progressGuard(
 				generationCallbackMutex(),
 				videoTaskData.progressCallback ? threadProgressCallback : nullptr,
 				videoTaskData.progressCallback ? this : nullptr);
-			output = generate_video(sdCtx, &params, &generatedFrameCount);
+			const bool ok = generate_video(sdCtx, &params, &output, &generatedFrameCount, &audio);
+			if (!ok) {
+				output = nullptr;
+				generatedFrameCount = 0;
+			}
+		}
+		if (audio) {
+			free_sd_audio(audio);
 		}
 		const float elapsedMs = static_cast<float>(ofGetElapsedTimeMicros() - sd->taskStartMicros) / 1000.0f;
 		if (!output || generatedFrameCount <= 0) {

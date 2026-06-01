@@ -30,6 +30,8 @@ private:
 	void saveFrames();
 	void saveVideo();
 	void drawFramePreview();
+	void updateContextSmoke();
+	void finishContextSmoke(int exitCode, const std::string& message);
 
 	ofxGgmlStableDiffusion sd;
 	ofxImGui::Gui gui;
@@ -80,5 +82,8 @@ private:
 	bool imGuiOk = true;
 	bool generating = false;
 	bool contextLoading = false;
+	bool contextSmoke = false;
+	uint64_t contextSmokeStartMillis = 0;
+	uint64_t contextSmokeTimeoutMillis = 900000;
 	std::atomic<float> progress{0.0f};
 };

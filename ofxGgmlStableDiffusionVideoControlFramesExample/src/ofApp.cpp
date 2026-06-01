@@ -280,7 +280,8 @@ void ofApp::configureContext() {
 	settings.vaePath = vaePath;
 	settings.weightType = SD_TYPE_COUNT;
 	settings.nThreads = -1;
-	settings.flashAttn = true;
+	settings.diffusionFlashAttn = true;
+	settings.enableMmap = false;
 	sd.configureContext(settings);
 	const auto capabilities = sd.getCapabilities();
 	contextLoading = sd.isBusy();

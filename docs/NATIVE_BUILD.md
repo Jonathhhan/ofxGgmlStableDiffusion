@@ -221,20 +221,20 @@ scripts\setup_windows.bat --cuda
 Pin a specific source snapshot:
 
 ```bat
-scripts\setup_windows.bat --cuda --source-release-tag master-585-44cca3d
+scripts\setup_windows.bat --cuda --source-release-tag master-666-7948df8
 ```
 
 Pin both upstream trees explicitly:
 
 ```bat
-scripts\setup_windows.bat --cuda --source-release-tag master-585-44cca3d --ggml-release-tag v0.9.11
+scripts\setup_windows.bat --cuda --source-release-tag master-666-7948df8 --ggml-release-tag v0.9.11
 ```
 
 The legacy-named helper below now does the same source-refresh job instead of
 staging prebuilt runtime binaries:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\download-stable-diffusion-release.ps1 -ReleaseTag master-585-44cca3d
+powershell -ExecutionPolicy Bypass -File .\scripts\download-stable-diffusion-release.ps1 -SourceReleaseTag master-666-7948df8
 ```
 
 ## Current Pin
@@ -242,8 +242,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\download-stable-diffusion-rel
 The vendored tree includes the required submodules so the native rebuild scripts
 can run end-to-end.
 
-- Upstream release tag: `master-585-44cca3d` (published 2026-04-19)
-- Vendored on: `2026-04-21`
+- Upstream release tag: `master-666-7948df8` (published 2026-06-01)
+- Vendored on: `2026-06-01`
 - Default rebuilds use this release tag unless you override it via
   `--source-release-tag` / `-SourceReleaseTag`.
 

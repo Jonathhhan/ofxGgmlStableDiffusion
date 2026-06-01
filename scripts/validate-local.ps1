@@ -71,6 +71,8 @@ $requiredPaths = @(
     "scripts/test-project-generator-examples.ps1",
     "scripts/run-stable-diffusion-runtime-smoke.ps1",
     "scripts/run-stable-diffusion-runtime-smoke.bat",
+    "scripts/run-wan-context-smoke.ps1",
+    "scripts/run-wan-context-smoke.bat",
     "scripts/test-build-stable-diffusion-dry-run.ps1",
     "tests/CMakeLists.txt"
 )
@@ -139,6 +141,12 @@ Write-Step "Checking Stable Diffusion runtime smoke dry-run"
 & (Join-Path $scriptRoot "run-stable-diffusion-runtime-smoke.ps1") -DryRun -Json -SummaryOnly
 if (!$?) {
     throw "Stable Diffusion runtime smoke dry-run failed"
+}
+
+Write-Step "Checking WAN context smoke dry-run"
+& (Join-Path $scriptRoot "run-wan-context-smoke.ps1") -DryRun
+if (!$?) {
+    throw "WAN context smoke dry-run failed"
 }
 
 if (-not $SkipTests) {

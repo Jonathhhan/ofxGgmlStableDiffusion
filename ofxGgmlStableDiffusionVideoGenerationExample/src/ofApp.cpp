@@ -1,12 +1,62 @@
 #include "ofApp.h"
 
 #include <algorithm>
+#include <cctype>
+#include <cstdint>
+#include <cstdlib>
+#include <exception>
+#include <fstream>
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+
+namespace {
+
+bool isContextSmokeEnabled() {
+	std::string value = ofGetEnv("OFXGGML_STABLE_DIFFUSION_CONTEXT_SMOKE");
+	std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
+		return static_cast<char>(std::tolower(c));
+	});
+	return value == "1" || value == "true" || value == "yes";
+}
+
+uint64_t readContextSmokeTimeoutMillis() {
+	const std::string value =
+		ofGetEnv("OFXGGML_STABLE_DIFFUSION_CONTEXT_SMOKE_TIMEOUT_MS");
+	if (value.empty()) {
+		return 900000;
+	}
+	try {
+		return std::max<uint64_t>(1000, std::stoull(value));
+	} catch (const std::exception&) {
+		return 900000;
+	}
+}
+
+void writeContextSmokeStatus(const std::string& message) {
+	const std::string path =
+		ofGetEnv("OFXGGML_STABLE_DIFFUSION_CONTEXT_SMOKE_STATUS");
+	if (path.empty()) {
+		return;
+	}
+	std::ofstream output(path, std::ios::app);
+	output << message << '\n';
+}
+
+} // namespace
 
 //--------------------------------------------------------------
 void ofApp::setup() {
+	writeContextSmokeStatus("setup:start");
 	ofSetWindowTitle("ofxGgmlStableDiffusion video generation");
 	ofSetFrameRate(60);
-	ofSetLogLevel(OF_LOG_WARNING);
+	contextSmoke = isContextSmokeEnabled();
+	contextSmokeStartMillis = ofGetElapsedTimeMillis();
+	contextSmokeTimeoutMillis = readContextSmokeTimeoutMillis();
+	ofSetLogLevel(contextSmoke ? OF_LOG_NOTICE : OF_LOG_WARNING);
 
 	prompt = "A cinematic ocean cliff at sunrise, slow camera drift";
 	promptB = "A cinematic ocean cliff at sunset, glowing clouds";
@@ -28,6 +78,19 @@ void ofApp::setup() {
 	ofxGgmlStableDiffusionExampleCopyToInput(vaePath, vaePathInput);
 	statusMessage = "Ready";
 
+	sd.setProgressCallback([this](int step, int steps, float time) {
+		const float value = steps > 0 ? static_cast<float>(step) / static_cast<float>(steps) : 0.0f;
+		progress.store(value);
+	});
+
+	if (contextSmoke) {
+		imGuiOk = false;
+		writeContextSmokeStatus("setup:context-smoke-configure");
+		configureContext();
+		writeContextSmokeStatus("setup:context-smoke-configured");
+		return;
+	}
+
 	auto window = ofGetCurrentWindow();
 	const auto setupState = gui.setup(window, nullptr, true, ImGuiConfigFlags_None, true);
 	if (!(setupState & ofxImGui::SetupState::Success)) {
@@ -37,10 +100,6 @@ void ofApp::setup() {
 	}
 
 	configureContext();
-	sd.setProgressCallback([this](int step, int steps, float time) {
-		const float value = steps > 0 ? static_cast<float>(step) / static_cast<float>(steps) : 0.0f;
-		progress.store(value);
-	});
 }
 
 //--------------------------------------------------------------
@@ -86,6 +145,8 @@ void ofApp::update() {
 			statusMessage = "Error: " + error.message;
 		}
 	}
+
+	updateContextSmoke();
 }
 
 //--------------------------------------------------------------
@@ -264,8 +325,10 @@ void ofApp::syncRequestFromUi() {
 
 //--------------------------------------------------------------
 void ofApp::configureContext() {
+	writeContextSmokeStatus("configure:start");
 	if (sd.isBusy()) {
 		statusMessage = "Stable Diffusion is busy";
+		writeContextSmokeStatus("configure:busy");
 		return;
 	}
 	syncRequestFromUi();
@@ -275,8 +338,10 @@ void ofApp::configureContext() {
 	settings.vaePath = vaePath;
 	settings.weightType = SD_TYPE_COUNT;
 	settings.nThreads = -1;
-	settings.flashAttn = true;
+	settings.diffusionFlashAttn = true;
+	settings.enableMmap = false;
 	sd.configureContext(settings);
+	writeContextSmokeStatus("configure:submitted");
 	const auto capabilities = sd.getCapabilities();
 	contextLoading = sd.isBusy();
 	if (contextLoading) {
@@ -457,4 +522,51 @@ void ofApp::keyPressed(int key) {
 	if (key == 'c' || key == 'C') {
 		cancelGeneration();
 	}
+}
+
+//--------------------------------------------------------------
+void ofApp::updateContextSmoke() {
+	if (!contextSmoke) {
+		return;
+	}
+
+	if (sd.isBusy() || contextLoading) {
+		const uint64_t elapsed = ofGetElapsedTimeMillis() - contextSmokeStartMillis;
+		if (elapsed > contextSmokeTimeoutMillis) {
+			ofxGgmlStableDiffusionExampleRequestCancel(
+				sd,
+				statusMessage,
+				"Context smoke timed out; cancelling load...");
+			finishContextSmoke(2, "WAN context smoke timed out");
+		}
+		return;
+	}
+
+	if (sd.hasLoadedContext()) {
+		finishContextSmoke(0, "WAN context smoke loaded successfully");
+		return;
+	}
+
+	const auto error = sd.getLastErrorInfo();
+	const std::string message = error.code == ofxGgmlStableDiffusionErrorCode::None ?
+		"WAN context smoke failed without an addon error" :
+		"WAN context smoke failed: " + error.message;
+	finishContextSmoke(1, message);
+}
+
+//--------------------------------------------------------------
+void ofApp::finishContextSmoke(int exitCode, const std::string& message) {
+	contextSmoke = false;
+	writeContextSmokeStatus("finish:" + ofToString(exitCode) + ":" + message);
+#ifdef _WIN32
+	TerminateProcess(GetCurrentProcess(), static_cast<UINT>(exitCode));
+#endif
+	if (exitCode == 0) {
+		ofLogNotice("ofxGgmlStableDiffusionVideoGenerationExample")
+			<< message << " (" << modelPath << ")";
+	} else {
+		ofLogError("ofxGgmlStableDiffusionVideoGenerationExample")
+			<< message;
+	}
+	ofExit(exitCode);
 }

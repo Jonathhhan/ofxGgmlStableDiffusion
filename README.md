@@ -421,13 +421,13 @@ The repo now includes a vendored upstream `stable-diffusion.cpp` source snapshot
 under `libs/stable-diffusion/source`, pinned to:
 
 - upstream repo: `https://github.com/leejet/stable-diffusion.cpp`
-- upstream release tag: `master-585-44cca3d`
-- upstream commit: `44cca3d`
-- vendored on: `2026-04-21`
+- upstream release tag: `master-666-7948df8`
+- upstream commit: `7948df8`
+- vendored on: `2026-06-01`
 
 The optional Windows prebuilt-runtime flow is currently pinned to the upstream
-GitHub release tag `master-585-44cca3d`, which was the latest upstream release
-published on `2026-04-19`. Override it with `--release-tag` if you want a
+GitHub release tag `master-666-7948df8`, which was the latest upstream release
+published on `2026-06-01`. Override it with `--source-release-tag` if you want a
 different upstream runtime. Source: [stable-diffusion.cpp releases](https://github.com/leejet/stable-diffusion.cpp/releases)
 
 The addon now includes the upstream header directly through
@@ -530,6 +530,16 @@ addon convention used by addons such as `ofxMidi`:
 - **[ofxGgmlStableDiffusionLoraEmbeddingExample](ofxGgmlStableDiffusionLoraEmbeddingExample/)** - LoRA adapter stacks and textual-inversion embeddings
 
 Each interactive example exposes cancellation while a long-running load or generation task is active.
+
+For WAN context-load smoke testing without rendering, build
+`ofxGgmlStableDiffusionVideoGenerationExample` and run:
+
+```powershell
+scripts\run-wan-context-smoke.ps1 `
+  -Model "C:\path\to\Wan2.1-T2V-1.3B-Q8_0.gguf" `
+  -TextEncoder "C:\path\to\umt5-xxl-encoder-Q8_0.gguf" `
+  -Vae "C:\path\to\wan_2.1_vae.safetensors"
+```
 
 ### Quick Links
 

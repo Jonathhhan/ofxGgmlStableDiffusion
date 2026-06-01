@@ -6,7 +6,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$DefaultSourceReleaseTag = "master-585-44cca3d"
+$DefaultSourceReleaseTag = "master-666-7948df8"
 
 function Write-Step {
     param([string]$Message)
@@ -58,7 +58,26 @@ function Get-ReleaseMetadata {
     }
 
     $escapedTag = [System.Uri]::EscapeDataString($Tag)
-    return Invoke-GitHubJsonRequest -Uri ($repoApiBase + '/tags/' + $escapedTag)
+    try {
+        return Invoke-GitHubJsonRequest -Uri ($repoApiBase + '/tags/' + $escapedTag)
+    } catch {
+        Write-Warning ("GitHub release metadata was unavailable for {0}; cloning the tag directly. {1}" -f $Tag, $_.Exception.Message)
+        return New-ReleaseMetadataFallback -Tag $Tag -Repository 'https://github.com/leejet/stable-diffusion.cpp'
+    }
+}
+
+function New-ReleaseMetadataFallback {
+    param(
+        [string]$Tag,
+        [string]$Repository
+    )
+    $encodedTag = [System.Uri]::EscapeDataString($Tag)
+    return [pscustomobject]@{
+        tag_name = $Tag
+        target_commitish = ""
+        html_url = "$Repository/releases/tag/$encodedTag"
+        zipball_url = "https://api.github.com/repos/$($Repository.Replace('https://github.com/', ''))/zipball/$encodedTag"
+    }
 }
 
 function Get-GgmlReleaseMetadata {
@@ -70,7 +89,12 @@ function Get-GgmlReleaseMetadata {
     }
 
     $escapedTag = [System.Uri]::EscapeDataString($Tag)
-    return Invoke-GitHubJsonRequest -Uri ($repoApiBase + '/tags/' + $escapedTag)
+    try {
+        return Invoke-GitHubJsonRequest -Uri ($repoApiBase + '/tags/' + $escapedTag)
+    } catch {
+        Write-Warning ("GitHub release metadata was unavailable for ggml {0}; cloning the tag directly. {1}" -f $Tag, $_.Exception.Message)
+        return New-ReleaseMetadataFallback -Tag $Tag -Repository 'https://github.com/ggml-org/ggml'
+    }
 }
 
 function Remove-DirectoryContents {
@@ -138,6 +162,13 @@ function Refresh-GgmlVendorTree {
         [string]$TargetDir,
         [switch]$DryRun
     )
+
+    if ([string]::IsNullOrWhiteSpace($Tag)) {
+        Write-Step "Using ggml submodule pinned by stable-diffusion.cpp"
+        Write-Host ("    Source dir: {0}" -f $TargetDir)
+        Write-Host "    Pass -GgmlReleaseTag to override this with a separate ggml release."
+        return
+    }
 
     $releaseMetadata = Get-GgmlReleaseMetadata -Tag $Tag
     $resolvedReleaseTag = $releaseMetadata.tag_name

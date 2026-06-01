@@ -79,6 +79,20 @@ void sd_log_cb(enum sd_log_level_t level, const char* log, void* data) {
 		return;
 	}
 
+	if (!ofIsCurrentThreadTheMainThread()) {
+		FILE* stream = (level <= SD_LOG_INFO) ? stdout : stderr;
+		const char* prefix =
+			level == SD_LOG_DEBUG ? "[debug ] " :
+			level == SD_LOG_INFO ? "[notice] " :
+			level == SD_LOG_WARN ? "[warning] " :
+			"[error ] ";
+		fputs(prefix, stream);
+		fputs(message.c_str(), stream);
+		fputc('\n', stream);
+		fflush(stream);
+		return;
+	}
+
 	switch (level) {
 	case SD_LOG_DEBUG:
 		ofLogVerbose("stable-diffusion") << message;
@@ -1917,7 +1931,7 @@ void ofxGgmlStableDiffusion::newUpscalerCtx(const std::string& esrganPath_,
 		thread.upscalerCtx = nullptr;
 	}
 
-	thread.upscalerCtx = new_upscaler_ctx(esrganPath_.c_str(), false, false, nThreads_, 0);
+	thread.upscalerCtx = new_upscaler_ctx(esrganPath_.c_str(), false, false, nThreads_, 0, nullptr, nullptr);
 	if (!thread.upscalerCtx) {
 		{
 			std::lock_guard<std::mutex> lock(stateMutex);
