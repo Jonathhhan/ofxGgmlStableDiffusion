@@ -20,6 +20,7 @@ public:
 private:
 	void syncRequestFromUi();
 	void configureContext();
+	void browseModelPath(std::string& path, std::array<char, 512>& input);
 	void startGeneration();
 	void cancelGeneration();
 	void loadInputImage();
@@ -42,11 +43,17 @@ private:
 	std::array<char, 512> promptInput{};
 	std::array<char, 512> promptBInput{};
 	std::array<char, 512> negativePromptInput{};
+	std::array<char, 512> modelPathInput{};
+	std::array<char, 512> t5xxlPathInput{};
+	std::array<char, 512> vaePathInput{};
 	std::array<char, 512> imagePathInput{};
 	std::array<char, 512> endFramePathInput{};
 	std::string prompt;
 	std::string promptB;
 	std::string negativePrompt;
+	std::string modelPath;
+	std::string t5xxlPath;
+	std::string vaePath;
 	std::string imagePath;
 	std::string endFramePath;
 	std::string statusMessage;

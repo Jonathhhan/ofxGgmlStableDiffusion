@@ -11,9 +11,21 @@ void ofApp::setup() {
 	prompt = "A cinematic ocean cliff at sunrise, slow camera drift";
 	promptB = "A cinematic ocean cliff at sunset, glowing clouds";
 	negativePrompt = "blurry, low quality, distorted";
-	std::copy(prompt.begin(), prompt.end(), promptInput.begin());
-	std::copy(promptB.begin(), promptB.end(), promptBInput.begin());
-	std::copy(negativePrompt.begin(), negativePrompt.end(), negativePromptInput.begin());
+	modelPath = ofxGgmlStableDiffusionExampleEnvOrReadablePath(
+		{"OFXGGML_STABLE_DIFFUSION_VIDEO_MODEL", "OFXGGML_STABLE_DIFFUSION_MODEL"},
+		{"models/Wan2.1-T2V-1.3B-Q8_0.gguf", "models/video/wan2.1-t2v-1.3b.gguf"});
+	t5xxlPath = ofxGgmlStableDiffusionExampleEnvOrReadablePath(
+		{"OFXGGML_STABLE_DIFFUSION_TEXT_ENCODER", "OFXGGML_STABLE_DIFFUSION_T5XXL"},
+		{"models/umt5-xxl-encoder-Q8_0.gguf", "models/text/umt5-xxl-encoder-Q8_0.gguf"});
+	vaePath = ofxGgmlStableDiffusionExampleEnvOrReadablePath(
+		{"OFXGGML_STABLE_DIFFUSION_VAE"},
+		{"models/wan_2.1_vae.safetensors", "models/vae/wan_2.1_vae.safetensors"});
+	ofxGgmlStableDiffusionExampleCopyToInput(prompt, promptInput);
+	ofxGgmlStableDiffusionExampleCopyToInput(promptB, promptBInput);
+	ofxGgmlStableDiffusionExampleCopyToInput(negativePrompt, negativePromptInput);
+	ofxGgmlStableDiffusionExampleCopyToInput(modelPath, modelPathInput);
+	ofxGgmlStableDiffusionExampleCopyToInput(t5xxlPath, t5xxlPathInput);
+	ofxGgmlStableDiffusionExampleCopyToInput(vaePath, vaePathInput);
 	statusMessage = "Ready";
 
 	auto window = ofGetCurrentWindow();
@@ -88,12 +100,45 @@ void ofApp::draw() {
 	}
 
 	gui.begin();
-	ImGui::SetNextWindowSize(ImVec2(520.0f, 560.0f), ImGuiCond_Once);
+	ImGui::SetNextWindowSize(ImVec2(620.0f, 720.0f), ImGuiCond_Once);
 	if (ImGui::Begin("Video Generation")) {
 		ImGui::TextWrapped("%s", statusMessage.c_str());
 		ImGui::TextWrapped("%s", modelSummary.c_str());
 		if (generating) {
 			ImGui::ProgressBar(progress.load(), ImVec2(-1.0f, 0.0f));
+		}
+		ImGui::Separator();
+
+		const bool busy = sd.isBusy();
+		if (busy) {
+			ImGui::BeginDisabled();
+		}
+		if (ImGui::InputText("Diffusion model", modelPathInput.data(), modelPathInput.size())) {
+			syncRequestFromUi();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Browse##diffusion")) {
+			browseModelPath(modelPath, modelPathInput);
+		}
+		if (ImGui::InputText("UMT5 / T5XXL", t5xxlPathInput.data(), t5xxlPathInput.size())) {
+			syncRequestFromUi();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Browse##t5xxl")) {
+			browseModelPath(t5xxlPath, t5xxlPathInput);
+		}
+		if (ImGui::InputText("VAE", vaePathInput.data(), vaePathInput.size())) {
+			syncRequestFromUi();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Browse##vae")) {
+			browseModelPath(vaePath, vaePathInput);
+		}
+		if (ImGui::Button("Configure Context")) {
+			configureContext();
+		}
+		if (busy) {
+			ImGui::EndDisabled();
 		}
 		ImGui::Separator();
 
@@ -150,7 +195,6 @@ void ofApp::draw() {
 			ImGui::InputInt("Seed Increment", &seedIncrement);
 		}
 
-		const bool busy = sd.isBusy();
 		const bool canGenerate = sd.hasLoadedContext() && !generating && !busy;
 		if (generating) {
 			ImGui::BeginDisabled();
@@ -211,14 +255,24 @@ void ofApp::syncRequestFromUi() {
 	prompt = ofxGgmlStableDiffusionExampleInputString(promptInput);
 	promptB = ofxGgmlStableDiffusionExampleInputString(promptBInput);
 	negativePrompt = ofxGgmlStableDiffusionExampleInputString(negativePromptInput);
+	modelPath = ofxGgmlStableDiffusionExampleInputString(modelPathInput);
+	t5xxlPath = ofxGgmlStableDiffusionExampleInputString(t5xxlPathInput);
+	vaePath = ofxGgmlStableDiffusionExampleInputString(vaePathInput);
 	imagePath = ofxGgmlStableDiffusionExampleInputString(imagePathInput);
 	endFramePath = ofxGgmlStableDiffusionExampleInputString(endFramePathInput);
 }
 
 //--------------------------------------------------------------
 void ofApp::configureContext() {
+	if (sd.isBusy()) {
+		statusMessage = "Stable Diffusion is busy";
+		return;
+	}
+	syncRequestFromUi();
 	ofxGgmlStableDiffusionContextSettings settings;
-	settings.modelPath = ofToDataPath("models/video/wan2.1-t2v-1.3b.gguf");
+	settings.diffusionModelPath = modelPath;
+	settings.t5xxlPath = t5xxlPath;
+	settings.vaePath = vaePath;
 	settings.weightType = SD_TYPE_COUNT;
 	settings.nThreads = -1;
 	settings.flashAttn = true;
@@ -239,6 +293,17 @@ void ofApp::configureContext() {
 				"Error: " + error.message;
 		}
 	}
+}
+
+//--------------------------------------------------------------
+void ofApp::browseModelPath(std::string& path, std::array<char, 512>& input) {
+	ofFileDialogResult result = ofSystemLoadDialog("Select model file");
+	if (!result.bSuccess) {
+		return;
+	}
+	path = result.getPath();
+	ofxGgmlStableDiffusionExampleCopyToInput(path, input);
+	statusMessage = "Selected model path";
 }
 
 //--------------------------------------------------------------

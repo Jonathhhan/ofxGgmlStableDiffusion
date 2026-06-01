@@ -118,7 +118,9 @@ int main() {
 	expectContains(imageWorkflowReadme, "ControlNet", imageWorkflowReadmePath);
 	expectContains(imageWorkflowReadme, "ofxImGui", imageWorkflowReadmePath);
 	expectContains(videoReadme, "ofxImGui", videoReadmePath);
+	expectContains(videoReadme, "UMT5 / T5XXL", videoReadmePath);
 	expectContains(videoControlReadme, "ofxImGui", videoControlReadmePath);
+	expectContains(videoControlReadme, "UMT5 / T5XXL", videoControlReadmePath);
 	expectContains(creativeLoopReadme, "ofxImGui", creativeLoopReadmePath);
 	expectContains(loraEmbeddingReadme, "ofxImGui", loraEmbeddingReadmePath);
 	expectContains(basicApp, "settings.weightType = SD_TYPE_COUNT", basicAppPath);
@@ -128,9 +130,15 @@ int main() {
 	expectContains(imageWorkflowApp, "controlCond", imageWorkflowAppPath);
 	expectContains(imageWorkflowApp, "gui.begin()", imageWorkflowAppPath);
 	expectContains(videoApp, "generateVideo", videoAppPath);
+	expectContains(videoApp, "settings.diffusionModelPath", videoAppPath);
+	expectContains(videoApp, "settings.t5xxlPath", videoAppPath);
+	expectContains(videoApp, "settings.vaePath", videoAppPath);
 	expectContains(videoApp, "gui.begin()", videoAppPath);
 	expectContains(videoControlApp, "controlFrames", videoControlAppPath);
 	expectContains(videoControlApp, "vaceStrength", videoControlAppPath);
+	expectContains(videoControlApp, "settings.diffusionModelPath", videoControlAppPath);
+	expectContains(videoControlApp, "settings.t5xxlPath", videoControlAppPath);
+	expectContains(videoControlApp, "settings.vaePath", videoControlAppPath);
 	expectContains(videoControlApp, "gui.begin()", videoControlAppPath);
 	expectContains(creativeLoopApp, "loop.start", creativeLoopAppPath);
 	expectContains(creativeLoopApp, "gui.begin()", creativeLoopAppPath);

@@ -20,6 +20,7 @@ public:
 private:
 	void syncRequestFromUi();
 	void configureContext();
+	void browseModelPath(std::string& path, std::array<char, 512>& input);
 	void loadControlFrames();
 	void clearControlFrames();
 	void startGeneration();
@@ -40,11 +41,15 @@ private:
 	std::array<char, 512> promptInput{};
 	std::array<char, 512> negativePromptInput{};
 	std::array<char, 512> modelPathInput{};
+	std::array<char, 512> t5xxlPathInput{};
+	std::array<char, 512> vaePathInput{};
 	std::array<char, 512> controlFrameDirInput{};
 
 	std::string prompt;
 	std::string negativePrompt;
 	std::string modelPath;
+	std::string t5xxlPath;
+	std::string vaePath;
 	std::string controlFrameDir;
 	std::string statusMessage;
 	std::string modelSummary;

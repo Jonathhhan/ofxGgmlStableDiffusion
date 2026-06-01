@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <initializer_list>
 #include <string>
 
 inline std::string ofxGgmlStableDiffusionExampleInputString(
@@ -33,6 +34,31 @@ inline std::string ofxGgmlStableDiffusionExampleResolveReadablePath(
 		return dataPath;
 	}
 	return path;
+}
+
+inline std::string ofxGgmlStableDiffusionExampleEnvOrReadablePath(
+	std::initializer_list<const char*> envNames,
+	std::initializer_list<std::string> candidates) {
+	for (const char* envName : envNames) {
+		if (envName == nullptr) {
+			continue;
+		}
+		const std::string value = ofGetEnv(envName);
+		if (!value.empty()) {
+			return ofxGgmlStableDiffusionExampleResolveReadablePath(value);
+		}
+	}
+	for (const auto& candidate : candidates) {
+		const auto resolved =
+			ofxGgmlStableDiffusionExampleResolveReadablePath(candidate);
+		if (ofFile::doesFileExist(resolved)) {
+			return resolved;
+		}
+	}
+	if (candidates.size() == 0) {
+		return "";
+	}
+	return ofxGgmlStableDiffusionExampleResolveReadablePath(*candidates.begin());
 }
 
 inline sd_image_t ofxGgmlStableDiffusionExampleImageView(ofPixels& pixels) {

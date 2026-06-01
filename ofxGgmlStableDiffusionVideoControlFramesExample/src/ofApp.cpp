@@ -21,11 +21,21 @@ void ofApp::setup() {
 
 	prompt = "A guided cinematic character walk cycle";
 	negativePrompt = "blurry, low quality, distorted";
-	modelPath = ofToDataPath("models/video/wan2.1-vace-1.3b.gguf");
+	modelPath = ofxGgmlStableDiffusionExampleEnvOrReadablePath(
+		{"OFXGGML_STABLE_DIFFUSION_VACE_MODEL", "OFXGGML_STABLE_DIFFUSION_VIDEO_MODEL", "OFXGGML_STABLE_DIFFUSION_MODEL"},
+		{"models/wan2.1-vace-1.3b-q8_0.gguf", "models/video/wan2.1-vace-1.3b.gguf"});
+	t5xxlPath = ofxGgmlStableDiffusionExampleEnvOrReadablePath(
+		{"OFXGGML_STABLE_DIFFUSION_TEXT_ENCODER", "OFXGGML_STABLE_DIFFUSION_T5XXL"},
+		{"models/umt5-xxl-encoder-Q8_0.gguf", "models/text/umt5-xxl-encoder-Q8_0.gguf"});
+	vaePath = ofxGgmlStableDiffusionExampleEnvOrReadablePath(
+		{"OFXGGML_STABLE_DIFFUSION_VAE"},
+		{"models/wan_2.1_vae.safetensors", "models/vae/wan_2.1_vae.safetensors"});
 	controlFrameDir = ofToDataPath("control_frames");
 	ofxGgmlStableDiffusionExampleCopyToInput(prompt, promptInput);
 	ofxGgmlStableDiffusionExampleCopyToInput(negativePrompt, negativePromptInput);
 	ofxGgmlStableDiffusionExampleCopyToInput(modelPath, modelPathInput);
+	ofxGgmlStableDiffusionExampleCopyToInput(t5xxlPath, t5xxlPathInput);
+	ofxGgmlStableDiffusionExampleCopyToInput(vaePath, vaePathInput);
 	ofxGgmlStableDiffusionExampleCopyToInput(controlFrameDir, controlFrameDirInput);
 	statusMessage = "Ready";
 
@@ -101,7 +111,7 @@ void ofApp::draw() {
 	}
 
 	gui.begin();
-	ImGui::SetNextWindowSize(ImVec2(540.0f, 680.0f), ImGuiCond_Once);
+	ImGui::SetNextWindowSize(ImVec2(640.0f, 760.0f), ImGuiCond_Once);
 	if (ImGui::Begin("Video Control Frames")) {
 		ImGui::TextWrapped("%s", statusMessage.c_str());
 		ImGui::TextWrapped("%s", modelSummary.c_str());
@@ -110,14 +120,39 @@ void ofApp::draw() {
 		}
 		ImGui::Separator();
 
-		if (ImGui::InputText("Model", modelPathInput.data(), modelPathInput.size())) {
+		const bool busy = sd.isBusy();
+		if (busy) {
+			ImGui::BeginDisabled();
+		}
+		if (ImGui::InputText("Diffusion model", modelPathInput.data(), modelPathInput.size())) {
 			syncRequestFromUi();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Browse##diffusion")) {
+			browseModelPath(modelPath, modelPathInput);
+		}
+		if (ImGui::InputText("UMT5 / T5XXL", t5xxlPathInput.data(), t5xxlPathInput.size())) {
+			syncRequestFromUi();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Browse##t5xxl")) {
+			browseModelPath(t5xxlPath, t5xxlPathInput);
+		}
+		if (ImGui::InputText("VAE", vaePathInput.data(), vaePathInput.size())) {
+			syncRequestFromUi();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Browse##vae")) {
+			browseModelPath(vaePath, vaePathInput);
 		}
 		if (ImGui::InputText("Control folder", controlFrameDirInput.data(), controlFrameDirInput.size())) {
 			syncRequestFromUi();
 		}
 		if (ImGui::Button("Configure Context")) {
 			configureContext();
+		}
+		if (busy) {
+			ImGui::EndDisabled();
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Load Control Frames")) {
@@ -167,7 +202,6 @@ void ofApp::draw() {
 			ImGui::SliderFloat("Cache End", &cacheEndPercent, 0.01f, 1.0f);
 		}
 
-		const bool busy = sd.isBusy();
 		const bool canGenerate = sd.hasLoadedContext() && !generating && !busy;
 		if (generating) {
 			ImGui::BeginDisabled();
@@ -228,14 +262,22 @@ void ofApp::syncRequestFromUi() {
 	prompt = ofxGgmlStableDiffusionExampleInputString(promptInput);
 	negativePrompt = ofxGgmlStableDiffusionExampleInputString(negativePromptInput);
 	modelPath = ofxGgmlStableDiffusionExampleInputString(modelPathInput);
+	t5xxlPath = ofxGgmlStableDiffusionExampleInputString(t5xxlPathInput);
+	vaePath = ofxGgmlStableDiffusionExampleInputString(vaePathInput);
 	controlFrameDir = ofxGgmlStableDiffusionExampleInputString(controlFrameDirInput);
 }
 
 //--------------------------------------------------------------
 void ofApp::configureContext() {
+	if (sd.isBusy()) {
+		statusMessage = "Stable Diffusion is busy";
+		return;
+	}
 	syncRequestFromUi();
 	ofxGgmlStableDiffusionContextSettings settings;
-	settings.modelPath = modelPath;
+	settings.diffusionModelPath = modelPath;
+	settings.t5xxlPath = t5xxlPath;
+	settings.vaePath = vaePath;
 	settings.weightType = SD_TYPE_COUNT;
 	settings.nThreads = -1;
 	settings.flashAttn = true;
@@ -259,6 +301,17 @@ void ofApp::configureContext() {
 			}
 		}
 	}
+}
+
+//--------------------------------------------------------------
+void ofApp::browseModelPath(std::string& path, std::array<char, 512>& input) {
+	ofFileDialogResult result = ofSystemLoadDialog("Select model file");
+	if (!result.bSuccess) {
+		return;
+	}
+	path = result.getPath();
+	ofxGgmlStableDiffusionExampleCopyToInput(path, input);
+	statusMessage = "Selected model path";
 }
 
 //--------------------------------------------------------------

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cctype>
+#include <cstdlib>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -294,6 +295,22 @@ inline std::string ofToUpper(std::string value) {
 
 inline std::string ofToDataPath(const std::string& value, bool = false) {
 	return value;
+}
+
+inline std::string ofGetEnv(const std::string& key) {
+#if defined(_MSC_VER)
+	char* value = nullptr;
+	std::size_t length = 0;
+	if (_dupenv_s(&value, &length, key.c_str()) != 0 || value == nullptr) {
+		return "";
+	}
+	std::string result(value, length > 0 ? length - 1 : 0);
+	free(value);
+	return result;
+#else
+	const char* value = std::getenv(key.c_str());
+	return value == nullptr ? "" : std::string(value);
+#endif
 }
 
 template <typename T>
