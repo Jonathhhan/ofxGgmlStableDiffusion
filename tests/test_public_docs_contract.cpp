@@ -101,7 +101,7 @@ int main() {
 	expectContains(readme, "The canonical `ofxGgmlStableDiffusionExample/` project is intentionally small", readmePath);
 	expectContains(docsWorkflow, "ofxGgmlStableDiffusionExample", docsWorkflowPath);
 	expectContains(docsWorkflow, "Starter Example", docsWorkflowPath);
-	expectContains(readme, "Current addon version: `1.3.0`", readmePath);
+	expectContains(readme, "Current addon version: `1.0.2`", readmePath);
 	expectContains(readme, "run-stable-diffusion-runtime-smoke.ps1", readmePath);
 	expectContains(readme, "run-wan-context-smoke.ps1", readmePath);
 	expectContains(apiReference, "`weightType` - Weight precision type", apiRefPath);
