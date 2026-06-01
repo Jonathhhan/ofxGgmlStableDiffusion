@@ -8,7 +8,7 @@ This addon is seeded from the existing `ofxStableDiffusion` implementation and
 keeps that wrapper-first stable-diffusion.cpp backend design, with the public
 addon name and API surface moved under the `ofxGgmlStableDiffusion` line.
 
-Current addon version: `1.0.1`
+Current addon version: `1.3.0`
 
 ## Staging Scope
 
