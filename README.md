@@ -530,6 +530,7 @@ addon convention used by addons such as `ofxMidi`:
 - **[ofxGgmlStableDiffusionLoraEmbeddingExample](ofxGgmlStableDiffusionLoraEmbeddingExample/)** - LoRA adapter stacks and textual-inversion embeddings
 
 Each interactive example exposes cancellation while a long-running load or generation task is active.
+Press `Esc` or `C` to cancel/stop in any example; in the creative-loop example, `F` clears the feedback frame.
 
 For WAN context-load smoke testing without rendering, build
 `ofxGgmlStableDiffusionVideoGenerationExample` and run:
