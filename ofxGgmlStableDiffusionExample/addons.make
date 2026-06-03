@@ -1,2 +1,3 @@
 ofxGgmlStableDiffusion
+ofxGgmlCore
 ofxImGui

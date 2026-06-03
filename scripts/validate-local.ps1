@@ -103,16 +103,17 @@ Assert-ContentContains $readmePath "not based on\s+.?ofxGgmlDiffusion" "ofxGgmlD
 Assert-ContentContains $agentsPath "ofxStableDiffusion" "agent lineage guidance"
 Assert-ContentContains $stagingPath "Exclude .?ofxGgmlDiffusion" "staging exclusion guidance"
 Assert-ContentContains $workflowGuidePath "ofxGgmlDiffusion.? is intentionally paused" "workflow guide diffusion exclusion"
-Assert-ContentContains $metadataPath '"requires"\s*:\s*\[\s*\]' "standalone metadata dependency contract"
+Assert-ContentContains $metadataPath '"requires"\s*:\s*\[\s*"ofxGgmlCore"\s*\]' "Core metadata dependency contract"
 Assert-ContentContains $addonConfigPath "ADDON_NAME\s*=\s*ofxGgmlStableDiffusion" "addon name"
+Assert-ContentContains $addonConfigPath "ADDON_DEPENDENCIES\s*\+=\s*ofxGgmlCore" "Core addon dependency"
 Assert-ContentContains $addonsMakePath "(?m)^ofxGgmlStableDiffusion\r?$" "example addon dependency"
+Assert-ContentContains $addonsMakePath "(?m)^ofxGgmlCore\r?$" "example Core dependency"
 Assert-ContentContains $addonsMakePath "(?m)^ofxImGui\r?$" "example ImGui dependency"
-Assert-ContentNotContains $addonsMakePath "(?m)^ofxGgmlCore\r?$" "default ofxGgmlCore example dependency"
 Assert-ContentNotContains $addonsMakePath "(?m)^ofxGgmlDiffusion\r?$" "ofxGgmlDiffusion example dependency"
 foreach ($exampleAddonsMakePath in @($basicAddonsMakePath, $imageWorkflowAddonsMakePath, $videoAddonsMakePath, $videoControlFramesAddonsMakePath, $creativeLoopAddonsMakePath, $loraEmbeddingAddonsMakePath)) {
     Assert-ContentContains $exampleAddonsMakePath "(?m)^ofxGgmlStableDiffusion\r?$" "example addon dependency"
+    Assert-ContentContains $exampleAddonsMakePath "(?m)^ofxGgmlCore\r?$" "example Core dependency"
     Assert-ContentContains $exampleAddonsMakePath "(?m)^ofxImGui\r?$" "example ImGui dependency"
-    Assert-ContentNotContains $exampleAddonsMakePath "(?m)^ofxGgmlCore\r?$" "default ofxGgmlCore example dependency"
     Assert-ContentNotContains $exampleAddonsMakePath "(?m)^ofxGgmlDiffusion\r?$" "ofxGgmlDiffusion example dependency"
 }
 if (Test-Path -LiteralPath (Join-Path $addonRoot "examples") -PathType Container) {

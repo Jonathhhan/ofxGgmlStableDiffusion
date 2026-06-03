@@ -14,7 +14,7 @@ This repository is part of the ofxGgml openFrameworks addon ecosystem.
 - Read README.md, addon_config.mk, docs, scripts, and tests before changing behavior.
 - Keep changes inside this repository's lane unless the task explicitly requires cross-repo coordination.
 - For ecosystem improvement work, create or update a plan before touching addon source.
-- Keep ofxGgmlCore as the shared base; companion addons may depend on Core, but Core must not depend on companions.
+- Use ofxGgmlCore as the default shared ggml/runtime base for companion addons; companion addons may depend on Core, but Core must not depend on companions.
 - Do not commit generated binaries, model files, downloaded runtimes, build folders, IDE metadata, memory indexes, caches, or media dumps.
 - Use openFrameworks ofLogNotice, ofLogWarning, ofLogError, or module-scoped ofLog(...) for addon runtime/example logging; keep raw stdout/stderr only for tests and CLI tools with machine-readable output contracts.
 - Prefer small, validated changes over broad refactors.
@@ -35,8 +35,9 @@ Do not replace this backend with ofxGgmlDiffusion, GGUF GAN experiments, or
 unrelated image-generation workflows. ofxGgmlDiffusion is paused and should stay
 out of managed automation unless explicitly promoted.
 
-Keep the default runtime standalone. Do not add a default dependency on
-ofxGgmlCore or shared ggml binaries.
+Use ofxGgmlCore as the default ggml provider for the stable-diffusion.cpp
+runtime. Keep a bundled/standalone ggml fallback available for compatibility and
+bisecting, but do not make it the default ecosystem path.
 
 ## Ecosystem Split
 

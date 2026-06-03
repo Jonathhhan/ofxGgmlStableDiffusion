@@ -24,6 +24,7 @@ meta:
 common:
 	ADDON_INCLUDES += src
 	ADDON_INCLUDES += libs/stable-diffusion/include
+	ADDON_DEPENDENCIES += ofxGgmlCore
 	# stable-diffusion.cpp is bundled as a separately built native library.
 	ADDON_SOURCES_EXCLUDE += .github/%
 	ADDON_SOURCES_EXCLUDE += benchmarks/%

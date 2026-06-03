@@ -136,6 +136,11 @@ if /i "%~1"=="--use-system-ggml" (
     shift
     goto parse_args
 )
+if /i "%~1"=="--use-bundled-ggml" (
+    set "PS_ARGS=!PS_ARGS! -UseBundledGgml"
+    shift
+    goto parse_args
+)
 if /i "%~1"=="--ofxggml-path" (
     if "%~2"=="" (
         echo Error: --ofxggml-path requires a value.
@@ -153,7 +158,7 @@ shift
 goto parse_args
 
 :usage
-echo build-stable-diffusion.bat - Build the bundled stable-diffusion.cpp runtime.
+echo build-stable-diffusion.bat - Build the stable-diffusion.cpp runtime.
 echo.
 echo Usage:
 echo   scripts\build-stable-diffusion.bat [OPTIONS]
@@ -174,8 +179,9 @@ echo   --build-dir DIR        Override build directory
 echo   --install-include-dir  Override staged include directory
 echo   --install-lib-dir DIR  Override staged library directory
 echo   --example-bin-dir DIR  Override runtime staging directory
-echo   --use-system-ggml      Use system GGML from ofxGgml instead of bundled
-echo   --ofxggml-path PATH    Path to ofxGgml addon ^(default: ..\ofxGgml^)
+echo   --use-system-ggml      Use Core/system GGML ^(default^)
+echo   --use-bundled-ggml     Use bundled stable-diffusion.cpp GGML fallback
+echo   --ofxggml-path PATH    Path to ofxGgmlCore or compatible provider ^(default: ..\ofxGgmlCore^)
 echo   --help                 Show this help message
 exit /b 0
 

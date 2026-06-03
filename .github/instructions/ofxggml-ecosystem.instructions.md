@@ -12,7 +12,7 @@ applyTo: "**"
 - If the readiness pass is too broad for the task, generate a planning handoff first: ..\ofxGgmlCore\scripts\plan-ecosystem.ps1.
 - Work in instruction, documentation, workflow, validation, or planning files before addon source when the task is about the ecosystem or coding agents.
 - Do not edit addon runtime behavior unless the user explicitly asks for addon behavior.
-- Keep companion changes inside this repository's lane and keep ofxGgmlCore as the shared base.
+- Keep companion changes inside this repository's lane and use ofxGgmlCore as the default shared ggml/runtime base.
 - Preserve generated artifact hygiene: no binaries, build folders, IDE metadata, model weights, downloaded runtimes, caches, media dumps, or memory indexes.
 - Use openFrameworks ofLogNotice, ofLogWarning, ofLogError, or module-scoped ofLog(...) for addon runtime/example logging; keep raw stdout/stderr only for tests and CLI tools with machine-readable output contracts.
 - Validate before handoff with scripts\validate-local.ps1; for cross-repo planning also report the Core readiness or planning command used.
@@ -25,5 +25,6 @@ Do not replace this backend with ofxGgmlDiffusion, GGUF GAN experiments, or
 unrelated image-generation workflows. ofxGgmlDiffusion is paused and should stay
 out of managed automation unless explicitly promoted.
 
-Keep the default runtime standalone. Do not add a default dependency on
-ofxGgmlCore or shared ggml binaries.
+Use ofxGgmlCore as the default ggml provider for the stable-diffusion.cpp
+runtime. Keep a bundled/standalone ggml fallback available for compatibility and
+bisecting, but do not make it the default ecosystem path.

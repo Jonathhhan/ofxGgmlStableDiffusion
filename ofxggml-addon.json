@@ -2,7 +2,9 @@
   "name": "ofxGgmlStableDiffusion",
   "lane": "stable-diffusion",
   "coreBaseline": "v1.0.2",
-  "requires": [],
+  "requires": [
+    "ofxGgmlCore"
+  ],
   "version": "1.0.2",
   "runtimeSmokeReport": ".stable-diffusion-runtime-smoke.json",
   "owns": [
@@ -17,7 +19,8 @@
     "stable-diffusion.cpp wrapper lane",
     "typed image generation requests",
     "image-to-video helper workflows",
-    "standalone native runtime staging",
+    "ofxGgmlCore ggml provider by default",
+    "bundled ggml fallback runtime staging",
     "local wrapper validation entrypoint"
   ],
   "platforms": [

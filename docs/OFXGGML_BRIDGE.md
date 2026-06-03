@@ -2,14 +2,14 @@
 
 This note captures integration options between `ofxGgml` and `ofxGgmlStableDiffusion`.
 
-Status: historical/advanced notes. The staged addon baseline is
-`ofxStableDiffusion` as an addon, keeps its `stable-diffusion.cpp` runtime
-standalone, and does not use `ofxGgmlDiffusion` or shared ggml binaries by
-default.
+Status: ecosystem bridge notes. The staged addon baseline is
+`ofxStableDiffusion` as an addon, keeps the `stable-diffusion.cpp` wrapper lane,
+uses `ofxGgmlCore` as the default ggml provider, and does not use
+`ofxGgmlDiffusion`.
 
 ## Integration Options
 
-### 1. Addon-Level Integration (Recommended)
+### 1. Addon-Level Integration
 
 `ofxGgml` already has an addon-level bridge in:
 
@@ -22,26 +22,26 @@ That adapter:
 - reloads `ofxGgmlStableDiffusion` contexts when model/runtime settings change
 - forwards typed requests through the `ofxGgmlStableDiffusion` wrapper API
 
-This is the recommended integration path because it:
-- Keeps native runtimes isolated and independently versioned
-- Avoids ABI/version coupling between stable-diffusion.cpp and llama.cpp/whisper.cpp
-- Allows each addon to upgrade independently
-- Prevents the link mismatches like the `sd_cache_params_init` issue
+This remains the recommended workflow integration path because it:
+- Keeps stable-diffusion behavior inside this addon
+- Lets companion addons call the wrapper API instead of reaching into diffusion internals
+- Avoids moving model-specific logic into Core
+- Keeps Core focused on the shared ggml/runtime base
 
-### 2. System GGML Integration (Optional)
+### 2. Core/System GGML Integration (Default)
 
-For advanced use cases, ofxGgmlStableDiffusion can optionally consume GGML from
-`ofxGgmlCore` at build time using `stable-diffusion.cpp`'s built-in
+By default, ofxGgmlStableDiffusion consumes GGML from `ofxGgmlCore` at build
+time using `stable-diffusion.cpp`'s built-in
 `-DSD_USE_SYSTEM_GGML=ON` support.
 
 **Build with system GGML:**
 
 ```bash
 # Linux/macOS
-./scripts/build-stable-diffusion.sh --use-system-ggml --ofxggml-path ../ofxGgmlCore
+./scripts/build-stable-diffusion.sh --cuda --ofxggml-path ../ofxGgmlCore
 
 # Windows
-.\scripts\build-stable-diffusion.ps1 -UseSystemGgml -OfxGgmlPath ..\ofxGgmlCore
+.\scripts\build-stable-diffusion.ps1 -Cuda -OfxGgmlPath ..\ofxGgmlCore
 ```
 
 **What this provides:**
@@ -53,7 +53,7 @@ For advanced use cases, ofxGgmlStableDiffusion can optionally consume GGML from
 - ofxGgmlCore must be built first
 - Backend flags must match (CPU/CUDA/Vulkan)
 - GGML versions must be compatible
-- This is opt-in; default remains standalone for stability
+- Use `-UseBundledGgml` / `--use-bundled-ggml` only for fallback compatibility builds
 
 See [docs/NATIVE_BUILD.md](NATIVE_BUILD.md) for complete system GGML build instructions.
 
@@ -74,7 +74,7 @@ It also performs runtime backend selection in addon code.
 
 ### `ofxGgmlStableDiffusion`
 
-**In standalone mode (default):**
+**In bundled fallback mode:**
 
 `ofxGgmlStableDiffusion` stages a diffusion runtime surface only:
 
@@ -85,7 +85,7 @@ It also performs runtime backend selection in addon code.
 
 It does not stage a public `ggml` SDK surface for other addons to consume.
 
-**In system GGML mode (optional):**
+**In Core/system GGML mode (default):**
 
 `ofxGgmlStableDiffusion` links against ofxGgmlCore's GGML and only stages:
 - public header in `libs/stable-diffusion/include/stable-diffusion.h`
@@ -95,27 +95,25 @@ It does not stage a public `ggml` SDK surface for other addons to consume.
 
 GGML itself comes from ofxGgmlCore in this mode.
 
-## Why Addon-Level Integration Is The Default
+## Why Core GGML Is The Default
 
-Even though system GGML is now supported, addon-level integration remains the recommended default for most users:
+Core-backed ggml is the recommended default for managed ecosystem builds:
 
 **Stability:**
-- Each addon can upgrade independently without breaking the other
-- Version mismatches are isolated
-- ABI changes in GGML don't require coordinated updates
+- One managed provider controls ggml version and backend selection
+- Companion addons avoid silently drifting across incompatible ggml builds
+- Agent automation has a single place to validate runtime readiness
 
 **Flexibility:**
-- Different GGML versions/patches can coexist
-- Backend selection can differ (e.g., CPU diffusion with CUDA language models)
-- Build flags and optimizations can be tuned per use case
+- The bundled fallback remains available when stable-diffusion.cpp needs isolation
+- Backend flags can still be selected per build while using Core as the provider
 
 **Simplicity:**
-- No coordination needed between addon maintainers
-- Users can update one addon without rebuilding the other
-- Fallback is always available if system GGML causes issues
+- Build scripts default to `..\ofxGgmlCore`
+- Validation checks the provider path and staged libraries
+- Companion projects list Core explicitly
 
-System GGML mode is available for users who:
-- Need to minimize disk usage
-- Want guaranteed version consistency
-- Are comfortable managing GGML compatibility manually
-- Have controlled environments where coordinated updates are feasible
+Bundled fallback mode is available for users who:
+- Need to bisect a stable-diffusion.cpp/ggml compatibility issue
+- Temporarily need an isolated ggml build
+- Are working outside the managed ofxGgml ecosystem

@@ -91,11 +91,9 @@ the highest-priority available backend: `cuda` > `vulkan` > `cpu-only`.
 
 ## Core/System GGML Mode
 
-By default, ofxGgmlStableDiffusion builds with bundled GGML from the vendored
-`stable-diffusion.cpp` source. The scripts also contain an opt-in system GGML
-path for controlled projects that want to share the `ofxGgmlCore` ggml runtime.
-This is not the default addon configuration and not a requirement for ecosystem
-staging, but it is now the preferred shared-ggml experiment when Core is built.
+By default, ofxGgmlStableDiffusion builds against the `ofxGgmlCore` ggml
+provider. The scripts still contain an explicit bundled ggml fallback for
+compatibility testing, but Core is the managed ecosystem default.
 
 ### Prerequisites
 
@@ -108,27 +106,33 @@ staging, but it is now the preferred shared-ggml experiment when Core is built.
 **Linux/macOS:**
 
 ```bash
-# Use default provider path (../../ofxGgmlCore)
-./scripts/build-stable-diffusion.sh --use-system-ggml
+# Use default provider path (../ofxGgmlCore)
+./scripts/build-stable-diffusion.sh
 
 # Specify custom Core-compatible provider path
-./scripts/build-stable-diffusion.sh --use-system-ggml --ofxggml-path /path/to/ofxGgmlCore
+./scripts/build-stable-diffusion.sh --ofxggml-path /path/to/ofxGgmlCore
 
 # Combine with backend selection
-./scripts/build-stable-diffusion.sh --use-system-ggml --cuda
+./scripts/build-stable-diffusion.sh --cuda
+
+# Explicit bundled fallback
+./scripts/build-stable-diffusion.sh --use-bundled-ggml --cuda
 ```
 
 **Windows:**
 
 ```powershell
 # Use default provider path (..\ofxGgmlCore)
-.\scripts\build-stable-diffusion.ps1 -UseSystemGgml
+.\scripts\build-stable-diffusion.ps1
 
 # Specify custom Core-compatible provider path
-.\scripts\build-stable-diffusion.ps1 -UseSystemGgml -OfxGgmlPath C:\path\to\ofxGgmlCore
+.\scripts\build-stable-diffusion.ps1 -OfxGgmlPath C:\path\to\ofxGgmlCore
 
 # Combine with backend selection
-.\scripts\build-stable-diffusion.ps1 -UseSystemGgml -Cuda
+.\scripts\build-stable-diffusion.ps1 -Cuda
+
+# Explicit bundled fallback
+.\scripts\build-stable-diffusion.ps1 -UseBundledGgml -Cuda
 ```
 
 ### What Happens
@@ -156,9 +160,9 @@ When `-DSD_USE_SYSTEM_GGML=ON` is enabled:
 - On openFrameworks projects, include both addons in your project
 
 **Fallback:**
-- System GGML mode is opt-in
-- The default standalone mode remains available if you encounter compatibility issues
-- Simply rebuild without `--use-system-ggml` to revert
+- Core/system GGML mode is the default
+- The bundled standalone mode remains available if you encounter compatibility issues
+- Rebuild with `--use-bundled-ggml` / `-UseBundledGgml` to isolate ggml
 
 ### Troubleshooting
 

@@ -23,11 +23,19 @@ param(
     [switch]$SkipSourceRefresh,
     [switch]$DryRun,
     [switch]$UseSystemGgml,
+    [switch]$UseBundledGgml,
     [string]$OfxGgmlPath = ""
 )
 
 $ErrorActionPreference = "Stop"
 $DefaultSourceReleaseTag = "master-666-7948df8"
+
+if ($UseSystemGgml -and $UseBundledGgml) {
+    throw "Choose either -UseSystemGgml or -UseBundledGgml, not both."
+}
+if (-not $UseBundledGgml) {
+    $UseSystemGgml = $true
+}
 
 function Write-Step {
     param([string]$Message)
@@ -301,6 +309,7 @@ function Invoke-SelfBuild {
         [switch]$DryRun,
         [switch]$SkipSourceRefresh,
         [switch]$UseSystemGgml,
+        [switch]$UseBundledGgml,
         [string]$OfxGgmlPath
     )
 
@@ -337,6 +346,9 @@ function Invoke-SelfBuild {
     }
     if ($UseSystemGgml) {
         $invokeArgs.UseSystemGgml = $true
+    }
+    if ($UseBundledGgml) {
+        $invokeArgs.UseBundledGgml = $true
     }
     if (-not [string]::IsNullOrWhiteSpace($OfxGgmlPath)) {
         $invokeArgs.OfxGgmlPath = $OfxGgmlPath
@@ -932,6 +944,7 @@ if ($All) {
             -DryRun:$DryRun `
             -SkipSourceRefresh:$(-not $firstBuild) `
             -UseSystemGgml:$UseSystemGgml `
+            -UseBundledGgml:$UseBundledGgml `
             -OfxGgmlPath $OfxGgmlPath
         $firstBuild = $false
     }
@@ -1048,8 +1061,8 @@ Recommended workflow:
   1. Re-run scripts/build-stable-diffusion.ps1 so it can refresh the latest upstream source snapshot
   2. Re-run scripts/build-stable-diffusion.ps1
 
-This addon intentionally keeps stable-diffusion.cpp standalone rather than sharing
-the ggml build from ofxGgml, to avoid ABI/version coupling across addons.
+This addon uses ofxGgmlCore as the default ggml provider. Re-run with
+-UseBundledGgml only when you need the compatibility fallback.
 "@
     }
 }
@@ -1351,7 +1364,7 @@ if ($stageBundledGgml) {
     Copy-IfPresent -Path $ggmlVulkanLibPath -Destination $InstallGgmlLibDir
     Copy-IfPresent -Path $ggmlMetalLibPath -Destination $InstallGgmlLibDir
 } else {
-    Write-Step "Skipping bundled ggml staging because -UseSystemGgml is enabled"
+    Write-Step "Skipping bundled ggml staging because Core/system ggml is enabled"
 }
 
 $variantGgmlStableDiffusionIncludeDir = Join-Path $VariantRootDir "$backendMode\stable-diffusion\include"

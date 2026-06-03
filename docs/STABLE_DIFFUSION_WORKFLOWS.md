@@ -16,13 +16,12 @@ ecosystem automation while this lane carries stable-diffusion.cpp work.
 
 ## Guardrails
 
-- Keep the default runtime standalone.
-- Do not introduce a default dependency on `ofxGgmlCore` or shared ggml
-  binaries.
-- Use `scripts\build-stable-diffusion.ps1 -UseSystemGgml` only as an explicit
-  Core ggml integration path; the script defaults that provider to
-  `..\ofxGgmlCore` and doctor reports whether the staged runtime is standalone,
-  Core/system ggml, or unknown.
+- Use `ofxGgmlCore` as the default ggml/runtime provider for ecosystem builds.
+- Keep bundled stable-diffusion.cpp ggml available only as an explicit fallback
+  via `scripts\build-stable-diffusion.ps1 -UseBundledGgml`.
+- The native build defaults the Core provider path to `..\ofxGgmlCore`, and
+  doctor reports whether the staged runtime is Core/system ggml, standalone, or
+  unknown.
 - Do not replace stable-diffusion.cpp with unrelated GAN, GGUF GAN, or
   `ofxGgmlDiffusion` workflows.
 - Keep model weights, downloaded runtimes, generated media, build output, and

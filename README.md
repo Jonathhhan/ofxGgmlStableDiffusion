@@ -23,9 +23,9 @@ replacement backend and it is not based on `ofxGgmlDiffusion`.
   rename settles.
 - Treat `ofxGgmlDiffusion`, GGUF GAN experiments, and unrelated model workflows
   as out of scope for this addon.
-- Add ecosystem metadata and validation only around the existing wrapper. The
-  default runtime stays standalone, while `-UseSystemGgml` is available as an
-  explicit Core ggml integration path for controlled builds.
+- Use `ofxGgmlCore` as the default ggml provider for ecosystem builds. A
+  bundled ggml fallback remains available with `-UseBundledGgml` for
+  compatibility testing and bisecting.
 
 ## Requirements
 
@@ -57,7 +57,7 @@ The addon is now structured more like a production addon:
 - Optional `ofxGgmlStableDiffusionHoloscanBridge` scaffold for live `frame -> conditioning -> diffusion -> preview` pipelines, with a native Holoscan runtime path on Linux and a clean fallback path when Holoscan is not installed or the platform is not supported yet
 - `ofxGgmlStableDiffusionVideoWorkflowHelpers.h` for reusable video-generation presets, request validation, and richer render-manifest export on top of the existing request/result layer
 - Legacy entry points still available for wrapper-level migration
-- Standalone native runtime management instead of sharing `ggml` binaries across addons
+- Core-backed ggml runtime management by default, with bundled ggml fallback staging
 
 ## Repo Layout
 
@@ -97,7 +97,8 @@ The addon is now structured more like a production addon:
 - stable-diffusion.cpp wrapper lane
 - typed image generation requests
 - image-to-video helper workflows
-- standalone native runtime staging
+- ofxGgmlCore ggml provider by default
+- bundled ggml fallback runtime staging
 - local wrapper validation entrypoint
 
 ## Threading Contract
@@ -346,15 +347,16 @@ cross-addon workflow.
 
 ## Companion Addon Integration
 
-- keep `ofxGgmlStableDiffusion` standalone at the native-runtime layer
+- use `ofxGgmlCore` as the shared ggml/runtime base for companion addons
 - integrate companion addons with it through the addon API
-- do not share the low-level `ggml` binary directly across addons
+- keep model-specific workflow logic in companion addons, not in Core
 
 Why:
 
-- upstream `stable-diffusion.cpp` may require a different `ggml` revision
-- backend flags and ABI expectations can diverge
-- wrapper-level integration is more stable than native binary coupling
+- Core gives the ecosystem one managed ggml provider by default
+- wrapper-level integration keeps model behavior inside the stable-diffusion lane
+- the bundled ggml fallback remains available if a stable-diffusion.cpp update
+  needs an isolated compatibility build
 
 More detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
 [docs/STAGING_PLAN.md](docs/STAGING_PLAN.md)
@@ -366,8 +368,8 @@ The addon stages native artifacts into addon-local paths:
 - `libs/stable-diffusion/include`
 - `libs/stable-diffusion/lib/vs`
 - `libs/stable-diffusion/lib/Linux64`
-- `libs/ggml/include`
-- `libs/ggml/lib/vs`
+- `libs/ggml/include` (bundled fallback builds only)
+- `libs/ggml/lib/vs` (bundled fallback builds only)
 - `libs/variants/<backend>/...`
 
 Rebuild helpers:

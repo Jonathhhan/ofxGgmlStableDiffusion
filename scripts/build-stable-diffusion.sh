@@ -15,7 +15,8 @@ CUDA=0
 VULKAN=0
 METAL=0
 CONFIGURATION="Release"
-USE_SYSTEM_GGML=0
+USE_SYSTEM_GGML=1
+USE_BUNDLED_GGML=0
 OFXGGML_PATH=""
 
 write_step() {
@@ -57,10 +58,11 @@ while [[ $# -gt 0 ]]; do
 		--metal) CPU_ONLY=0; METAL=1; AUTO=0; shift ;;
 		--auto) AUTO=1; CPU_ONLY=0; CUDA=0; VULKAN=0; METAL=0; shift ;;
 		--use-system-ggml) USE_SYSTEM_GGML=1; shift ;;
+		--use-bundled-ggml) USE_SYSTEM_GGML=0; USE_BUNDLED_GGML=1; shift ;;
 		--ofxggml-path) OFXGGML_PATH="$2"; shift 2 ;;
 		--help|-h)
 			cat <<'EOF'
-build-stable-diffusion.sh - Build the bundled stable-diffusion.cpp runtime.
+build-stable-diffusion.sh - Build the stable-diffusion.cpp runtime.
 
 Usage:
   ./scripts/build-stable-diffusion.sh [OPTIONS]
@@ -77,7 +79,8 @@ Options:
   --source-dir DIR       Override vendored source directory
   --build-dir DIR        Override build directory
   --install-lib-dir DIR  Override staged library directory
-  --use-system-ggml      Use system GGML from ofxGgmlCore instead of bundled
+  --use-system-ggml      Use Core/system GGML (default)
+  --use-bundled-ggml     Use bundled stable-diffusion.cpp GGML fallback
   --ofxggml-path PATH    Path to ofxGgmlCore or compatible provider (default: ../ofxGgmlCore)
   --help                 Show this help message
 EOF
@@ -88,6 +91,10 @@ EOF
 			;;
 	esac
 done
+
+if [[ "$USE_SYSTEM_GGML" -eq 1 && "$USE_BUNDLED_GGML" -eq 1 ]]; then
+	die "Choose either --use-system-ggml or --use-bundled-ggml, not both."
+fi
 
 if [[ -z "$JOBS" ]]; then
 	if command -v nproc >/dev/null 2>&1; then
