@@ -82,6 +82,7 @@ void ofApp::draw() {
 		const auto stats = loop.getStats();
 		ImGui::TextWrapped("%s", statusMessage.c_str());
 		ImGui::TextWrapped("%s", modelSummary.c_str());
+		ImGui::TextWrapped("%s", ofxGgmlStableDiffusionExampleRuntimeLabel(sd).c_str());
 		ImGui::Text(
 			"Frames %d | Preview %d | Refine %d | Latency %.1f ms | %s",
 			stats.framesGenerated,

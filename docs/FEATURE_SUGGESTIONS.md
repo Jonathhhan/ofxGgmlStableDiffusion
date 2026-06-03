@@ -2,6 +2,10 @@
 
 This document contains suggested features and enhancements for future versions of the ofxGgmlStableDiffusion addon.
 
+Current released addon version: `1.0.2`. Entries that mention future versions
+are roadmap/planning notes unless they are also documented in `CHANGELOG.md`
+for the current release.
+
 ## High Priority Features
 
 ### 1. Advanced Error Handling ✅ IMPLEMENTED (v1.0.0)
@@ -172,9 +176,11 @@ sd.generate(request);
 
 ## Low Priority / Future Enhancements
 
-### 9. Real-time Generation Modes ✅ IMPLEMENTED (v1.3.0)
+### 9. Real-time Generation Modes - Roadmap / Partially Present
 
-**Status**: ✅ **COMPLETED** in version 1.3.0
+**Status**: Roadmap / partially present. `ofxGgmlStableDiffusionRealtimeSession`
+and `ofxGgmlStableDiffusionRealtimeVideoSession` exist in the current addon
+line, but a promoted future release contract has not shipped.
 
 **Overview**:
 Real-time generation modes enable low-latency, interactive image generation workflows optimized for live performance, VJ applications, and interactive installations. This feature would leverage fast sampling methods (LCM, Turbo, TCD) and streaming inference patterns to achieve sub-second generation times.
@@ -244,9 +250,11 @@ sd.stopRealtimeSession();
 - Live video filtering and effects
 - Interactive character generation for games
 
-### 10. Model Quantization Support ✅ IMPLEMENTED (v1.3.0)
+### 10. Model Quantization Support - Roadmap
 
-**Status**: ✅ **COMPLETED** in version 1.3.0
+**Status**: Roadmap. Treat current quantization support as metadata,
+recommendation, and compatibility guidance for already-quantized models unless
+runtime quantization is explicitly promoted in a future release.
 
 **Overview**:
 Model quantization support would enable using quantized Stable Diffusion models (Q4_0, Q5_0, Q8_0, etc.) for reduced memory usage and faster inference on resource-constrained hardware. This feature would complement real-time generation modes by enabling deployment on lower-end GPUs and embedded systems.
@@ -313,9 +321,10 @@ for (const auto& level : levels) {
 - Batch processing with limited memory
 - Real-time generation on mid-range hardware
 
-### 11. Prompt Engineering Helpers ✅ IMPLEMENTED (v1.3.0)
+### 11. Prompt Engineering Helpers - Roadmap / Partial Helpers
 
-**Status**: ✅ **COMPLETED** in version 1.3.0
+**Status**: Roadmap / partial helpers. Keep this section as planning material
+until the helper surface is promoted in a release changelog.
 
 **Overview**:
 Prompt engineering helpers would provide utilities for crafting, analyzing, and managing prompts to achieve better generation results. This includes templates, token analysis, emphasis syntax, and prompt optimization tools.
@@ -836,7 +845,7 @@ This section is reserved for features requested by addon users. Please submit fe
 
 ## Implementation Status Summary
 
-### ✅ Completed Features (v1.0.0 - v1.3.0)
+### Completed Features (through current 1.0.2 docs)
 1. ✅ Advanced Error Handling (v1.0.0)
 2. ✅ Model Preloading and Management (v1.1.0)
 3. ✅ Generation Queue System (v1.1.0)
@@ -844,9 +853,6 @@ This section is reserved for features requested by addon users. Please submit fe
 5. ✅ ControlNet Multi-Model Support (v1.2.0)
 7. ✅ Image Seed Management (v1.1.0)
 8. ✅ Inpainting and Outpainting (v1.2.0)
-9. ✅ Real-time Generation Modes (v1.3.0)
-10. ✅ Model Quantization Support (v1.3.0)
-11. ✅ Prompt Engineering Helpers (v1.3.0)
 13. ✅ Advanced Sampling Options (v1.2.0)
 16. ✅ Performance Profiling (v1.2.0)
 18. ✅ Animation and Interpolation (v1.2.0)
@@ -855,6 +861,9 @@ This section is reserved for features requested by addon users. Please submit fe
 ### 🚧 Partially Completed
 12. Batch Processing Utilities - API scaffold only; generation/export methods are placeholders.
 6. 🚧 LoRA Management System (v1.2.0 - discovery implemented, convenience methods pending)
+9. Real-time Generation Modes - session helpers present; promoted release contract pending.
+10. Model Quantization Support - metadata/recommendation helpers only unless future runtime support is promoted.
+11. Prompt Engineering Helpers - planning/partial helper surface.
 
 ### 📋 Planned
 - Textual Inversion Support (Feature #14)

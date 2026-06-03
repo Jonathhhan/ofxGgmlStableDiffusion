@@ -8,6 +8,9 @@
 - BasicGeneration accepts legacy `.ckpt` model paths and uses LoRA-specific adapter extension checks.
 - ImageWorkflow exposes image-model and ControlNet model paths from the panel.
 - Video examples allow up to 300 frames and 60 FPS from the panel.
+- Examples show a compact runtime backend label inferred from native system info.
+- Focused example Cancel buttons stay available for context loads as well as generation.
+- VideoControlFrames warns when loaded control-frame count and requested frame count differ.
 
 ## 1.0.2 - 2026-06-02
 

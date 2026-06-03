@@ -115,6 +115,7 @@ void ofApp::draw() {
 	if (ImGui::Begin("Video Control Frames")) {
 		ImGui::TextWrapped("%s", statusMessage.c_str());
 		ImGui::TextWrapped("%s", modelSummary.c_str());
+		ImGui::TextWrapped("%s", ofxGgmlStableDiffusionExampleRuntimeLabel(sd).c_str());
 		if (generating) {
 			ImGui::ProgressBar(progress.load(), ImVec2(-1.0f, 0.0f));
 		}
@@ -162,7 +163,18 @@ void ofApp::draw() {
 		if (ImGui::Button("Clear Control Frames")) {
 			clearControlFrames();
 		}
-		ImGui::Text("Loaded control frames: %s", ofToString(controlFrames.size()).c_str());
+		const int loadedControlFrameCount = static_cast<int>(controlFrames.size());
+		const bool controlFrameCountMismatch =
+			loadedControlFrameCount > 0 && loadedControlFrameCount != frameCount;
+		ImGui::Text("Loaded control frames: %s", ofToString(loadedControlFrameCount).c_str());
+		if (controlFrameCountMismatch) {
+			ImGui::TextWrapped("Warning: loaded frames do not match requested frames.");
+			ImGui::SameLine();
+			if (ImGui::Button("Use Loaded Count")) {
+				frameCount = loadedControlFrameCount;
+				statusMessage = "Frame count matched to loaded control frames";
+			}
+		}
 
 		if (ImGui::InputTextMultiline("Prompt", promptInput.data(), promptInput.size(), ImVec2(-1.0f, 80.0f))) {
 			syncRequestFromUi();
@@ -219,13 +231,13 @@ void ofApp::draw() {
 			ImGui::EndDisabled();
 		}
 		ImGui::SameLine();
-		if (!generating) {
+		if (!busy || sd.isCancellationRequested()) {
 			ImGui::BeginDisabled();
 		}
-		if (ImGui::Button("Cancel")) {
+		if (ImGui::Button(sd.isCancellationRequested() ? "Stopping..." : "Cancel")) {
 			cancelGeneration();
 		}
-		if (!generating) {
+		if (!busy || sd.isCancellationRequested()) {
 			ImGui::EndDisabled();
 		}
 

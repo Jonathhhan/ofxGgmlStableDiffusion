@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <initializer_list>
 #include <string>
 
@@ -91,12 +92,36 @@ inline bool ofxGgmlStableDiffusionExampleLoadImageView(
 inline bool ofxGgmlStableDiffusionExampleRequestCancel(
 	ofxGgmlStableDiffusion& sd,
 	std::string& statusMessage,
-	const std::string& message = "Cancelling after current step...") {
-	if (sd.isGenerating() && sd.requestCancellation()) {
+	const std::string& message = "Cancelling at the next safe checkpoint...") {
+	if (sd.requestCancellation()) {
 		statusMessage = message;
 		return true;
 	}
 	return false;
+}
+
+inline std::string ofxGgmlStableDiffusionExampleRuntimeLabel(
+	ofxGgmlStableDiffusion& sd) {
+	const char* rawInfo = sd.getSystemInfo();
+	const std::string info = rawInfo ? rawInfo : "";
+	std::string lower = info;
+	std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) {
+		return static_cast<char>(std::tolower(c));
+	});
+
+	if (lower.find("cuda") != std::string::npos) {
+		return "Runtime: CUDA";
+	}
+	if (lower.find("vulkan") != std::string::npos) {
+		return "Runtime: Vulkan";
+	}
+	if (lower.find("metal") != std::string::npos) {
+		return "Runtime: Metal";
+	}
+	if (!info.empty()) {
+		return "Runtime: CPU / native";
+	}
+	return "Runtime: unknown";
 }
 
 inline void ofxGgmlStableDiffusionExampleDrawImageFit(

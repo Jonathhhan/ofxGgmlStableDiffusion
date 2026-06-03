@@ -92,6 +92,7 @@ void ofApp::draw() {
 	if (ImGui::Begin("LoRA Embeddings")) {
 		ImGui::TextWrapped("%s", statusMessage.c_str());
 		ImGui::TextWrapped("%s", modelSummary.c_str());
+		ImGui::TextWrapped("%s", ofxGgmlStableDiffusionExampleRuntimeLabel(sd).c_str());
 		if (generating) {
 			ImGui::ProgressBar(progress.load(), ImVec2(-1.0f, 0.0f));
 		}
@@ -177,13 +178,13 @@ void ofApp::draw() {
 			ImGui::EndDisabled();
 		}
 		ImGui::SameLine();
-		if (!generating) {
+		if (!busy || sd.isCancellationRequested()) {
 			ImGui::BeginDisabled();
 		}
-		if (ImGui::Button("Cancel")) {
+		if (ImGui::Button(sd.isCancellationRequested() ? "Stopping..." : "Cancel")) {
 			cancelGeneration();
 		}
-		if (!generating) {
+		if (!busy || sd.isCancellationRequested()) {
 			ImGui::EndDisabled();
 		}
 

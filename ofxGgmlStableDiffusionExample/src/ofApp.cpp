@@ -99,6 +99,7 @@ void ofApp::draw() {
 		const bool busy = stableDiffusion.isBusy();
 		ImGui::TextWrapped("%s", statusMessage.c_str());
 		ImGui::TextWrapped("%s", modelSummary.c_str());
+		ImGui::TextWrapped("%s", ofxGgmlStableDiffusionExampleRuntimeLabel(stableDiffusion).c_str());
 		if (busy) {
 			ImGui::ProgressBar(progress.load(), ImVec2(-1.0f, 0.0f));
 		}

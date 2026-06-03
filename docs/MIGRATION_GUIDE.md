@@ -4,6 +4,9 @@
 
 This guide helps you migrate to the latest version of ofxGgmlStableDiffusion and adopt modern API patterns.
 
+Current released addon version: `1.0.2`. Future-version sections are roadmap
+notes unless they are also listed in `CHANGELOG.md`.
+
 ## From Legacy API to Modern API
 
 ### Text-to-Image Generation
@@ -94,7 +97,7 @@ sd.generateVideo(request);
 
 ## Breaking Changes by Version
 
-### Version 1.3.0
+### Draft / Roadmap: Future Compatibility
 
 **New:**
 - Cancellation support API
@@ -291,7 +294,7 @@ if (error.code != ofxGgmlStableDiffusionErrorCode::None) {
 
 ## Using New Features
 
-### Cancellation (v1.3.0+)
+### Cancellation (current API)
 
 ```cpp
 // Start generation
@@ -349,7 +352,7 @@ sd.configureContext(settings2);  // Fast
 ### Backward Compatibility
 
 - All legacy `txt2img()`, `img2img()`, etc. methods still work
-- No breaking changes in v1.3.0
+- No breaking changes are documented for the current 1.0.2 line
 - Plan to use request-based API for new code
 
 ### Forward Compatibility

@@ -9,6 +9,7 @@ the plain video example for prompt-only or single-image video generation.
 - Load a folder of image control frames
 - Configure WAN/VACE diffusion, UMT5 / T5XXL text encoder, and VAE paths from the panel
 - Generate a guided video request with `controlFrames`
+- Warn when loaded control-frame count and requested frame count differ
 - Tune VACE strength, WAN high-noise overrides, and native cache settings
 - Preview generated frames
 - Save frame sequences with metadata or export a video file

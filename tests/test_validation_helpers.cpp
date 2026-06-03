@@ -40,8 +40,12 @@ int main() {
 		"leading parent traversal is rejected");
 	ok &= expect(ofxSdPathHasParentTraversal("models/../model.gguf"),
 		"embedded parent traversal is rejected");
+	ok &= expect(ofxSdPathHasParentTraversal("models\\..\\model.gguf"),
+		"Windows-style embedded parent traversal is rejected");
 	ok &= expect(!ofxSdPathHasParentTraversal("models/subdir/model.gguf"),
 		"normal nested paths are allowed");
+	ok &= expect(!ofxSdPathHasParentTraversal("models\\subdir\\model.gguf"),
+		"normal Windows-style nested paths are allowed");
 
 	ok &= expect(ofxSdIsSafeChildPathComponent("metadata.json"),
 		"simple child filename is allowed");
@@ -49,6 +53,10 @@ int main() {
 		"parent traversal child filename is rejected");
 	ok &= expect(!ofxSdIsSafeChildPathComponent("nested/metadata.json"),
 		"nested child filename is rejected");
+	ok &= expect(!ofxSdIsSafeChildPathComponent("nested\\metadata.json"),
+		"Windows-style nested child filename is rejected");
+	ok &= expect(!ofxSdIsSafeChildPathComponent("C:metadata.json"),
+		"drive-like child filename is rejected");
 
 	if (!ok) {
 		return 1;

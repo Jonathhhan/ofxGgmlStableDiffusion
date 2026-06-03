@@ -248,6 +248,7 @@ void ofApp::draw() {
         ImGui::TextWrapped("%s", statusMessage.c_str());
         const bool showModelName = (modelLoaded || generating) && !modelPath.empty();
         ImGui::TextWrapped("Model: %s", showModelName ? displayFileName(modelPath).c_str() : "");
+        ImGui::TextWrapped("%s", ofxGgmlStableDiffusionExampleRuntimeLabel(sd).c_str());
         if (busy) {
             ImGui::BeginDisabled();
         }

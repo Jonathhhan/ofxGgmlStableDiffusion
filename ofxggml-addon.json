@@ -1,9 +1,9 @@
 {
   "name": "ofxGgmlStableDiffusion",
   "lane": "stable-diffusion",
-  "coreBaseline": "v1.0.1",
+  "coreBaseline": "v1.0.2",
   "requires": [],
-  "version": "1.0.1",
+  "version": "1.0.2",
   "runtimeSmokeReport": ".stable-diffusion-runtime-smoke.json",
   "owns": [
     "stable-diffusion.cpp",

@@ -1,8 +1,15 @@
-# ofxGgmlStableDiffusion v1.3.0 Release Notes
+# ofxGgmlStableDiffusion Future Roadmap Notes
+
+> Current released addon version: `1.0.2`. This document is a draft roadmap /
+> historical planning note for possible post-1.0.2 work. It is not a shipped
+> release note and should not be used as the current release contract.
 
 ## Overview
 
-Version 1.3.0 represents a major milestone for ofxGgmlStableDiffusion, adding four critical features that significantly enhance the addon's capabilities for interactive applications, experimentation, and production workflows. This release focuses on real-time performance, hardware accessibility, user experience, and systematic testing.
+This draft describes possible future work for ofxGgmlStableDiffusion,
+centered on interactive applications, experimentation, and production workflow
+helpers. Some APIs mentioned here already exist in earlier releases, while
+others remain proposals or partial scaffolds.
 
 ## New Features
 
@@ -314,7 +321,8 @@ Start with the examples in `docs/FEATURE_SUGGESTIONS.md` for each feature. The A
 
 ## Future Roadmap
 
-With v1.3.0 complete, the remaining planned features are:
+If this roadmap is promoted into a future release, remaining planned features
+would include:
 
 1. **Textual Inversion Support** (Feature #14): Enhanced embedding management
 2. **Safety and Content Filtering** (Feature #15): NSFW filtering and classification
@@ -326,7 +334,8 @@ With v1.3.0 complete, the remaining planned features are:
 
 ## Credits
 
-Implemented as part of the planned feature roadmap for ofxGgmlStableDiffusion, building on the solid foundation established in versions 1.0.0-1.2.0.
+Prepared as part of the planned feature roadmap for ofxGgmlStableDiffusion,
+building on the current 1.0.2 addon line.
 
 ---
 
@@ -402,17 +411,17 @@ ofLogNotice() << "Use: " << info.name << " for "
 
 ---
 
-## Changelog Summary
+## Draft Changelog Summary
 
-**Added (v1.3.0):**
+**Proposed / partially present:**
 - Real-time generation session management with 3 modes
-- Model quantization support with 7 levels
+- Quantization metadata and recommendation helpers for already-quantized models
 - Prompt engineering helpers with templates and analysis
 - Batch processing utilities for parameter exploration
 
 **Enhanced:**
-- Documentation updated with implementation status
-- Feature suggestions marked as completed
+- Documentation would be updated with promoted implementation status
+- Feature suggestions would move from roadmap to release notes once shipped
 
 **Dependencies:**
 - No new dependencies
