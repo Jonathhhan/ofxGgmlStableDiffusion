@@ -22,6 +22,19 @@ target_include_directories(test_video_helpers PRIVATE
 
 add_test(NAME video_helpers COMMAND test_video_helpers)
 
+add_executable(test_video_export
+    test_video_export.cpp
+    ../src/video/ofxGgmlStableDiffusionNativeVideoExport.cpp
+)
+
+target_include_directories(test_video_export PRIVATE
+    "${STUB_DIR}"
+    "${SRC_DIR}"
+    "${SD_INCLUDE_DIR}"
+)
+
+add_test(NAME video_export COMMAND test_video_export)
+
 add_executable(test_image_helpers
     test_image_helpers.cpp
 )

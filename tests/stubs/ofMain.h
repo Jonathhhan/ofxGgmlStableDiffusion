@@ -20,6 +20,40 @@ enum ofImageType {
 	OF_IMAGE_COLOR_ALPHA = 4
 };
 
+enum ofImageQualityType {
+	OF_IMAGE_QUALITY_WORST,
+	OF_IMAGE_QUALITY_LOW,
+	OF_IMAGE_QUALITY_MEDIUM,
+	OF_IMAGE_QUALITY_HIGH,
+	OF_IMAGE_QUALITY_BEST
+};
+
+enum ofImageFormat {
+	OF_IMAGE_FORMAT_JPEG
+};
+
+class ofBuffer {
+public:
+	void clear() {
+		storage.clear();
+	}
+
+	std::size_t size() const {
+		return storage.size();
+	}
+
+	const char* getData() const {
+		return storage.empty() ? nullptr : storage.data();
+	}
+
+	void append(const char* data, std::size_t size) {
+		storage.insert(storage.end(), data, data + size);
+	}
+
+private:
+	std::vector<char> storage;
+};
+
 class ofPixels {
 public:
 	bool isAllocated() const {
@@ -320,6 +354,13 @@ inline std::string ofToString(const T& value) {
 	return stream.str();
 }
 
+template <typename T>
+inline std::string ofToString(const T& value, int width, char fill) {
+	std::ostringstream stream;
+	stream << std::setw(width) << std::setfill(fill) << value;
+	return stream.str();
+}
+
 inline std::string ofToString(float value, int precision) {
 	std::ostringstream stream;
 	stream << std::fixed << std::setprecision(precision) << value;
@@ -377,6 +418,10 @@ public:
 	bool isFile() const {
 		std::error_code error;
 		return std::filesystem::is_regular_file(path_, error);
+	}
+
+	std::string getEnclosingDirectory() const {
+		return std::filesystem::path(path_).parent_path().string();
 	}
 
 	static bool doesFileExist(const std::string& path) {
@@ -442,11 +487,75 @@ public:
 		return files.at(static_cast<std::size_t>(index));
 	}
 
+	static bool createDirectory(const std::string& path, bool = false, bool = false) {
+		if (path.empty()) {
+			return true;
+		}
+		std::error_code error;
+		std::filesystem::create_directories(path, error);
+		return !error;
+	}
+
 private:
 	std::string path_;
 	std::vector<std::string> allowedExtensions;
 	std::vector<ofFile> files;
 };
+
+class ofFilePath {
+public:
+	static bool isAbsolute(const std::string& path) {
+		return std::filesystem::path(path).is_absolute();
+	}
+
+	static std::string getFileExt(const std::string& path) {
+		std::string extension = std::filesystem::path(path).extension().string();
+		if (!extension.empty() && extension.front() == '.') {
+			extension.erase(extension.begin());
+		}
+		return extension;
+	}
+
+	static std::string join(const std::string& directory, const std::string& filename) {
+		return (std::filesystem::path(directory) / filename).string();
+	}
+};
+
+inline bool ofSaveImage(
+	const ofPixels& pixels,
+	const std::string& path,
+	ofImageQualityType = OF_IMAGE_QUALITY_BEST) {
+	if (!pixels.isAllocated()) {
+		return false;
+	}
+	std::ofstream output(path, std::ios::binary);
+	if (!output.is_open()) {
+		return false;
+	}
+	output << "stub-image";
+	return output.good();
+}
+
+inline bool ofSaveImage(
+	const ofPixels& pixels,
+	ofBuffer& buffer,
+	ofImageFormat,
+	ofImageQualityType = OF_IMAGE_QUALITY_BEST) {
+	if (!pixels.isAllocated()) {
+		return false;
+	}
+	const char jpegStub[] = {
+		static_cast<char>(0xff),
+		static_cast<char>(0xd8),
+		'S',
+		'D',
+		static_cast<char>(0xff),
+		static_cast<char>(0xd9)
+	};
+	buffer.clear();
+	buffer.append(jpegStub, sizeof(jpegStub));
+	return true;
+}
 
 class ofFileDialogResult {
 public:
