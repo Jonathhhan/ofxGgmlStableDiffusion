@@ -1306,8 +1306,9 @@ $ggmlCpuLibPath = Find-FirstFile -Root $BuildDir -Names @('ggml-cpu.lib')
 $ggmlCudaLibPath = Find-FirstFile -Root $BuildDir -Names @('ggml-cuda.lib')
 $ggmlVulkanLibPath = Find-FirstFile -Root $BuildDir -Names @('ggml-vulkan.lib')
 $ggmlMetalLibPath = Find-FirstFile -Root $BuildDir -Names @('ggml-metal.lib')
-$webpLibPath = Find-FirstFile -Root $BuildDir -Names @('webp.lib')
+$webpLibPath = Find-FirstFile -Root $BuildDir -Names @('libwebp.lib', 'webp.lib')
 $webpmuxLibPath = Find-FirstFile -Root $BuildDir -Names @('libwebpmux.lib', 'webpmux.lib')
+$sharpYuvLibPath = Find-FirstFile -Root $BuildDir -Names @('libsharpyuv.lib', 'sharpyuv.lib')
 $webmLibPath = Find-FirstFile -Root $BuildDir -Names @('webm.lib', 'libwebm.lib')
 $sdCliPath = Find-FirstFile -Root $BuildDir -Names @('sd-cli.exe')
 
@@ -1325,8 +1326,9 @@ if ($BuildCli -and -not $sdCliPath) {
 }
 
 $optionalSupportLibs = @(
-    @{ Name = 'webp.lib'; Path = $webpLibPath },
+    @{ Name = 'libwebp.lib'; Path = $webpLibPath },
     @{ Name = 'libwebpmux.lib'; Path = $webpmuxLibPath },
+    @{ Name = 'libsharpyuv.lib'; Path = $sharpYuvLibPath },
     @{ Name = 'webm.lib'; Path = $webmLibPath }
 )
 $missingSupportLibs = @($optionalSupportLibs | Where-Object { -not $_.Path })
@@ -1342,6 +1344,7 @@ Copy-IfPresent -Path $libPath -Destination $InstallLibDir
 Copy-IfPresent -Path $sdCliPath -Destination $InstallBinDir
 Copy-IfPresent -Path $webpLibPath -Destination $InstallLibDir
 Copy-IfPresent -Path $webpmuxLibPath -Destination $InstallLibDir
+Copy-IfPresent -Path $sharpYuvLibPath -Destination $InstallLibDir
 Copy-IfPresent -Path $webmLibPath -Destination $InstallLibDir
 foreach ($binDir in $exampleBinDirs) {
     Copy-IfPresent -Path $dllPath -Destination $binDir -AllowLockedDestination

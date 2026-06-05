@@ -7,6 +7,7 @@
 
 #include <array>
 #include <atomic>
+#include <future>
 #include <string>
 #include <vector>
 
@@ -20,7 +21,12 @@ public:
 private:
 	void syncRequestFromUi();
 	void configureContext();
-	void browseModelPath(std::string& path, std::array<char, 512>& input);
+	void loadModelPathSettings();
+	void saveModelPathSettings() const;
+	void applyModelDefaults(bool updatePrompt);
+	void applyPromptPreset(int presetIndex);
+	ofxGgmlStableDiffusionContextSettings makeCurrentContextSettings() const;
+	void browseModelPath(std::string& path, std::array<char, 512>& input, bool persistModelPaths = false);
 	void startGeneration();
 	void cancelGeneration();
 	void loadInputImage();
@@ -30,8 +36,15 @@ private:
 	void saveFrames();
 	void saveVideo();
 	void drawFramePreview();
+	void updatePlayback();
+	void updateExportJob();
 	void updateContextSmoke();
 	void finishContextSmoke(int exitCode, const std::string& message);
+
+	struct ExportJobResult {
+		bool success = false;
+		std::string message;
+	};
 
 	ofxGgmlStableDiffusion sd;
 	ofxImGui::Gui gui;
@@ -68,6 +81,10 @@ private:
 	int seed = -1;
 	int seedIncrement = 1;
 	int currentFrame = 0;
+	int previewFps = 6;
+	int promptPresetIndex = 0;
+	int exportFormatIndex = 0;
+	uint64_t lastPreviewFrameMillis = 0;
 	float cfgScale = 5.0f;
 	float guidance = 5.0f;
 	float strength = 0.75f;
@@ -83,7 +100,10 @@ private:
 	bool generating = false;
 	bool contextLoading = false;
 	bool contextSmoke = false;
+	bool exportInProgress = false;
+	bool previewPlaying = false;
 	uint64_t contextSmokeStartMillis = 0;
 	uint64_t contextSmokeTimeoutMillis = 900000;
 	std::atomic<float> progress{0.0f};
+	std::future<ExportJobResult> exportFuture;
 };

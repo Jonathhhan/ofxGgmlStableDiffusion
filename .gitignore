@@ -43,10 +43,14 @@ ofxGgmlStableDiffusion*Example/bin/data/output/
 ofxGgmlStableDiffusion*Example/bin/data/outputs/
 ofxGgmlStableDiffusion*Example/bin/data/renders/
 ofxGgmlStableDiffusion*Example/bin/data/videos/
+ofxGgmlStableDiffusion*Example/bin/data/settings/
 ofxGgmlStableDiffusion*Example/bin/data/models/*
 !ofxGgmlStableDiffusion*Example/bin/data/models/**/
 !ofxGgmlStableDiffusion*Example/bin/data/models/**/.gitkeep
 ofxGgmlStableDiffusion*Example/bin/data/*.png
+ofxGgmlStableDiffusion*Example/bin/data/*.webp
+ofxGgmlStableDiffusion*Example/bin/data/*.webm
+ofxGgmlStableDiffusion*Example/bin/data/*.avi
 ofxGgmlStableDiffusion*Example/bin/data/last_model.txt
 
 # Native staging output

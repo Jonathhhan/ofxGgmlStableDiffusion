@@ -170,6 +170,16 @@ int main() {
 	{
 		ofxGgmlStableDiffusionContextSettings settings;
 		settings.modelPath = "models/video/Wan2.1-T2V-1.3B.gguf";
+		const auto profile = ofxGgmlStableDiffusionParameterTuningHelpers::resolveVideoProfile(settings);
+		ok &= expect(profile.modelFamily == ofxGgmlStableDiffusionModelFamily::WAN, "wan t2v profile detects family");
+		ok &= expect(profile.defaultWidth == 832, "wan t2v defaults to 832px width");
+		ok &= expect(profile.defaultHeight == 480, "wan t2v defaults to 480px height");
+		ok &= expect(profile.defaultFrameCount == 33, "wan t2v defaults to 33 frames");
+		ok &= expect(profile.defaultFps == 16, "wan t2v defaults to 16 fps");
+		ok &= expect(profile.defaultSampleSteps == 20, "wan t2v defaults to 20 steps");
+		ok &= expectNear(profile.defaultCfgScale, 6.0f, 0.0001f, "wan t2v cfg default");
+		ok &= expectNear(profile.defaultStrength, 0.75f, 0.0001f, "wan t2v strength default");
+
 		const auto realtimeVideo =
 			ofxGgmlStableDiffusionParameterTuningHelpers::resolveRecommendedRealtimeVideoSettings(
 				settings);

@@ -22,10 +22,32 @@ meta:
 	ADDON_URL = https://github.com/Jonathhhan/ofxGgmlStableDiffusion
 
 common:
-	ADDON_INCLUDES += src
+	ADDON_INCLUDES = src
 	ADDON_INCLUDES += libs/stable-diffusion/include
+	ADDON_INCLUDES += libs/stable-diffusion/source
+	ADDON_INCLUDES += libs/stable-diffusion/source/examples/common
+	ADDON_INCLUDES += libs/stable-diffusion/source/thirdparty
+	ADDON_INCLUDES += libs/stable-diffusion/source/thirdparty/libwebm
+	ADDON_INCLUDES += libs/stable-diffusion/source/thirdparty/libwebp/src
 	ADDON_DEPENDENCIES += ofxGgmlCore
 	# stable-diffusion.cpp is bundled as a separately built native library.
+	ADDON_SOURCES = src/ofxGgmlStableDiffusion.cpp
+	ADDON_SOURCES += src/ofxGgmlStableDiffusionThread.cpp
+	ADDON_SOURCES += src/bridges/ofxGgmlStableDiffusionHoloscanBridge.cpp
+	ADDON_SOURCES += src/core/ofxGgmlStableDiffusionBatchProcessor.cpp
+	ADDON_SOURCES += src/core/ofxGgmlStableDiffusionCreativeWorkflow.cpp
+	ADDON_SOURCES += src/core/ofxGgmlStableDiffusionModelManager.cpp
+	ADDON_SOURCES += src/core/ofxGgmlStableDiffusionPerformanceProfiler.cpp
+	ADDON_SOURCES += src/core/ofxGgmlStableDiffusionProgressTracker.cpp
+	ADDON_SOURCES += src/core/ofxGgmlStableDiffusionPromptHelpers.cpp
+	ADDON_SOURCES += src/core/ofxGgmlStableDiffusionQuantization.cpp
+	ADDON_SOURCES += src/core/ofxGgmlStableDiffusionQueue.cpp
+	ADDON_SOURCES += src/core/ofxGgmlStableDiffusionRealtimeSession.cpp
+	ADDON_SOURCES += src/core/ofxGgmlStableDiffusionRealtimeVideoSession.cpp
+	ADDON_SOURCES += src/core/ofxGgmlStableDiffusionSamplingHelpers.cpp
+	ADDON_SOURCES += src/video/ofxGgmlStableDiffusionNativeVideoExport.cpp
+	ADDON_SOURCES += src/video/ofxGgmlStableDiffusionUpstreamMediaExport.cpp
+	ADDON_SOURCES += src/video/ofxGgmlStableDiffusionVideo.cpp
 	ADDON_SOURCES_EXCLUDE += .github/%
 	ADDON_SOURCES_EXCLUDE += benchmarks/%
 	ADDON_SOURCES_EXCLUDE += docs/%

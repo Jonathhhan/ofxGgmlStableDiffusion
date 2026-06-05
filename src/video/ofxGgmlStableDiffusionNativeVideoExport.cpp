@@ -1,5 +1,7 @@
 #include "ofxGgmlStableDiffusionNativeVideoExport.h"
 
+#include "ofxGgmlStableDiffusionUpstreamMediaExport.h"
+
 #include "ofImage.h"
 #include "ofUtils.h"
 
@@ -206,7 +208,7 @@ bool saveAvi(const std::string& path, const ofxGgmlStableDiffusionVideoClip& cli
 } // namespace
 
 bool isWebmExportAvailable() {
-	return false;
+	return ofxGgmlStableDiffusionUpstreamMediaExport::isAvailable();
 }
 
 bool saveWebm(const std::string& path, const ofxGgmlStableDiffusionVideoClip& clip, int quality) {
@@ -215,10 +217,17 @@ bool saveWebm(const std::string& path, const ofxGgmlStableDiffusionVideoClip& cl
 		return static_cast<char>(std::tolower(c));
 	});
 
+	if (extension == "webm" || extension == "webp") {
+		if (ofxGgmlStableDiffusionUpstreamMediaExport::saveVideo(path, clip, quality)) {
+			return true;
+		}
+		ofLogWarning("ofxGgmlStableDiffusion")
+			<< "Upstream WebM/WebP export is unavailable or failed for: " << path;
+		return false;
+	}
 	if (extension != "avi") {
 		ofLogWarning("ofxGgmlStableDiffusion")
-			<< "Only AVI export is currently available from the addon export path. "
-			<< "Use an .avi filename to match sd-cli's built-in fallback writer.";
+			<< "Video export supports .webm, .webp, or .avi paths.";
 		return false;
 	}
 
