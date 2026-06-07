@@ -8,20 +8,24 @@ that should remain stable even when the bundled native `stable-diffusion.cpp`
 
 ### Core Functionality
 - **Video helpers**: Timing calculations, frame sequencing for all video modes (`Standard`, `Loop`, `PingPong`, `Boomerang`)
+- **Video export**: Rejection paths plus local RIFF/AVI fallback writer coverage
 - **Image helpers**: Mode names, input image requirements, task routing, default strength and CFG scale parameters
 - **Ranking helpers**: Image selection mode names, score ranking algorithm, metadata handling
+- **Capability and parameter helpers**: Model-family detection, model-specific defaults, and clamping
+- **Example compile checks**: Starter, basic generation, image workflow, video generation, video control, creative loop, and LoRA examples compile against the stubs
 
 ### Test Organization
 
-#### Basic Tests (Original)
+#### Helper Tests
 - `test_image_helpers.cpp` - Basic image mode helper functions
 - `test_video_helpers.cpp` - Basic video sequencing and timing
 - `test_ranking_helpers.cpp` - Basic ranking functionality
-
-#### Extended Tests (New)
 - `test_image_helpers_extended.cpp` - Comprehensive coverage of all image modes and their default parameters
 - `test_video_helpers_extended.cpp` - Edge cases for video timing, sequencing, and frame lookups
 - `test_ranking_helpers_extended.cpp` - Advanced ranking scenarios including edge cases
+- `test_video_export.cpp` - Video export validation and AVI fallback coverage
+- `test_parameter_tuning_helpers.cpp` - Model-family defaults and range clamping
+- `test_capability_helpers.cpp` - Capability/model-family routing
 
 ### Edge Cases Covered
 - **Empty collections**: Zero frames, zero scores
@@ -31,9 +35,10 @@ that should remain stable even when the bundled native `stable-diffusion.cpp`
 - **Identical values**: Same scores (verifies stable sort behavior)
 - **Invalid states**: Invalid scores, mixed valid/invalid scores
 - **All enum values**: Complete coverage of all mode enumerations
+- **Video export states**: Empty clips, unsupported extensions, mismatched frame sizes, and RIFF/AVI signatures
 
 ### Test Statistics
-- **6 test executables** with comprehensive coverage
+- **22 test executables** with wrapper, docs, export, and example-build coverage
 - **100+ individual test assertions**
 - All tests are pure C++ with no openFrameworks runtime dependency
 

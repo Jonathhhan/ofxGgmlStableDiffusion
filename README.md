@@ -278,8 +278,14 @@ Useful video-export helpers:
 
 - `ofxGgmlStableDiffusionVideoClip::saveMetadataJson(...)`
 - `ofxGgmlStableDiffusionVideoClip::saveFrameSequenceWithMetadata(...)`
+- `ofxGgmlStableDiffusionVideoClip::saveWebm(...)`
 - `ofxGgmlStableDiffusion::saveVideoMetadata(...)`
 - `ofxGgmlStableDiffusion::saveVideoFramesWithMetadata(...)`
+
+`saveWebm(...)` accepts `.webp`, `.webm`, and `.avi` paths. `.webp`/`.webm`
+use the upstream stable-diffusion.cpp media writer when the rebuilt runtime
+stages its media libraries; `.avi` remains a small local MJPEG fallback for
+compatibility and debugging.
 
 Long video generation (chunked rendering):
 

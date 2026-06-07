@@ -11,6 +11,14 @@
 - Examples show a compact runtime backend label inferred from native system info.
 - Focused example Cancel buttons stay available for context loads as well as generation.
 - VideoControlFrames warns when loaded control-frame count and requested frame count differ.
+- VideoGeneration now saves and restores the last diffusion, UMT5/T5XXL, and VAE model paths.
+- VideoGeneration uses Wan 2.1 T2V 1.3B-oriented defaults for resolution, frame count, FPS, steps, CFG, and strength.
+- Video clip export routes `.webp` and `.webm` through upstream `media_io.cpp` when staged, with `.avi` kept as the local fallback path.
+- ProjectGenerator smoke tests repair partially generated Visual Studio projects when the legacy generator exits after writing a `.vcxproj`.
+
+### Added
+
+- Regression coverage for video export rejection paths and the local RIFF/AVI fallback writer.
 
 ## 1.0.2 - 2026-06-02
 
