@@ -11,14 +11,21 @@
     "stable-diffusion.cpp",
     "text-to-image",
     "image-to-image",
+    "image-to-video",
     "inpainting",
     "upscaling",
+    "video export",
+    "video metadata export",
     "native runtime staging"
   ],
   "features": [
     "stable-diffusion.cpp wrapper lane",
     "typed image generation requests",
+    "typed video generation requests",
     "image-to-video helper workflows",
+    "webp and webm upstream media export",
+    "avi fallback video export",
+    "video frame metadata export",
     "ofxGgmlCore ggml provider by default",
     "bundled ggml fallback runtime staging",
     "local wrapper validation entrypoint"

@@ -44,6 +44,7 @@ int main() {
 		std::filesystem::path(__FILE__).parent_path().parent_path();
 
 	const std::filesystem::path readmePath = repoRoot / "README.md";
+	const std::filesystem::path metadataPath = repoRoot / "ofxggml-addon.json";
 	const std::filesystem::path docsWorkflowPath = repoRoot / ".github" / "workflows" / "docs.yml";
 	const std::filesystem::path apiRefPath = repoRoot / "docs" / "API_REFERENCE.md";
 	const std::filesystem::path troubleshootingPath = repoRoot / "docs" / "TROUBLESHOOTING.md";
@@ -77,6 +78,7 @@ int main() {
 		repoRoot / "ofxGgmlStableDiffusionLoraEmbeddingExample" / "src" / "ofApp.cpp";
 
 	const std::string readme = readFile(readmePath);
+	const std::string metadata = readFile(metadataPath);
 	const std::string docsWorkflow = readFile(docsWorkflowPath);
 	const std::string apiReference = readFile(apiRefPath);
 	const std::string troubleshooting = readFile(troubleshootingPath);
@@ -104,6 +106,11 @@ int main() {
 	expectContains(readme, "Current addon version: `1.0.2`", readmePath);
 	expectContains(readme, "run-stable-diffusion-runtime-smoke.ps1", readmePath);
 	expectContains(readme, "run-wan-context-smoke.ps1", readmePath);
+	expectContains(metadata, "\"image-to-video\"", metadataPath);
+	expectContains(metadata, "\"video export\"", metadataPath);
+	expectContains(metadata, "\"webp and webm upstream media export\"", metadataPath);
+	expectContains(metadata, "\"avi fallback video export\"", metadataPath);
+	expectContains(metadata, "\"video frame metadata export\"", metadataPath);
 	expectContains(apiReference, "`weightType` - Weight precision type", apiRefPath);
 	expectContains(apiReference, "Generator-backed experimentation surface", apiRefPath);
 	expectContains(apiReference, "ofxGgmlStableDiffusionCreativeWorkflow", apiRefPath);
