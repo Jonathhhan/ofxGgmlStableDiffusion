@@ -45,6 +45,7 @@ int main() {
 
 	const std::filesystem::path readmePath = repoRoot / "README.md";
 	const std::filesystem::path metadataPath = repoRoot / "ofxggml-addon.json";
+	const std::filesystem::path releaseNotesPath = repoRoot / "docs" / "releases" / "v1.0.2.md";
 	const std::filesystem::path docsWorkflowPath = repoRoot / ".github" / "workflows" / "docs.yml";
 	const std::filesystem::path apiRefPath = repoRoot / "docs" / "API_REFERENCE.md";
 	const std::filesystem::path troubleshootingPath = repoRoot / "docs" / "TROUBLESHOOTING.md";
@@ -79,6 +80,7 @@ int main() {
 
 	const std::string readme = readFile(readmePath);
 	const std::string metadata = readFile(metadataPath);
+	const std::string releaseNotes = readFile(releaseNotesPath);
 	const std::string docsWorkflow = readFile(docsWorkflowPath);
 	const std::string apiReference = readFile(apiRefPath);
 	const std::string troubleshooting = readFile(troubleshootingPath);
@@ -111,6 +113,9 @@ int main() {
 	expectContains(metadata, "\"webp and webm upstream media export\"", metadataPath);
 	expectContains(metadata, "\"avi fallback video export\"", metadataPath);
 	expectContains(metadata, "\"video frame metadata export\"", metadataPath);
+	expectContains(releaseNotes, "ofxGgmlStableDiffusion 1.0.2", releaseNotesPath);
+	expectContains(releaseNotes, "Do not publish this line as `v1.3.0`", releaseNotesPath);
+	expectContains(releaseNotes, "CMake wrapper tests passed: 22/22", releaseNotesPath);
 	expectContains(apiReference, "`weightType` - Weight precision type", apiRefPath);
 	expectContains(apiReference, "Generator-backed experimentation surface", apiRefPath);
 	expectContains(apiReference, "ofxGgmlStableDiffusionCreativeWorkflow", apiRefPath);
