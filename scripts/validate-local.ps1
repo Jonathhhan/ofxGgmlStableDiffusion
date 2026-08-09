@@ -71,6 +71,7 @@ $requiredPaths = @(
     "scripts/test-project-generator-examples.ps1",
     "scripts/run-stable-diffusion-runtime-smoke.ps1",
     "scripts/run-stable-diffusion-runtime-smoke.bat",
+    "scripts/test-runtime-smoke-model-discovery.ps1",
     "scripts/run-wan-context-smoke.ps1",
     "scripts/run-wan-context-smoke.bat",
     "scripts/test-build-stable-diffusion-dry-run.ps1",
@@ -142,6 +143,12 @@ Write-Step "Checking Stable Diffusion runtime smoke dry-run"
 & (Join-Path $scriptRoot "run-stable-diffusion-runtime-smoke.ps1") -DryRun -Json -SummaryOnly
 if (!$?) {
     throw "Stable Diffusion runtime smoke dry-run failed"
+}
+
+Write-Step "Checking Stable Diffusion runtime smoke model discovery"
+& (Join-Path $scriptRoot "test-runtime-smoke-model-discovery.ps1")
+if (!$?) {
+    throw "Stable Diffusion runtime smoke model discovery test failed"
 }
 
 Write-Step "Checking WAN context smoke dry-run"

@@ -5,11 +5,17 @@ param(
 	[ValidateSet("cpu", "cuda", "vulkan", "metal")]
 	[string]$Backend = $(if ($env:OFXGGML_STABLE_DIFFUSION_BACKEND) { $env:OFXGGML_STABLE_DIFFUSION_BACKEND } else { "cpu" }),
 	[string]$OutputPath = "",
+	[string]$Prompt = "a simple red circle on a white background",
+	[int]$Width = 256,
+	[int]$Height = 256,
+	[int]$Steps = 1,
+	[int]$Seed = 1,
 	[switch]$Clean,
 	[switch]$DryRun,
 	[switch]$Json,
 	[switch]$SummaryOnly,
-	[switch]$RequireModel
+	[switch]$RequireModel,
+	[switch]$InferenceOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -72,11 +78,25 @@ function Resolve-SmokeModel {
 			continue
 		}
 		$candidate = Get-ChildItem -LiteralPath $root -Recurse -File -ErrorAction SilentlyContinue |
-			Where-Object { $_.Extension -in @(".safetensors", ".ckpt", ".gguf") } |
+			Where-Object { $_.Extension -in @(".safetensors", ".ckpt") } |
 			Sort-Object Length, Name |
 			Select-Object -First 1
 		if ($candidate) {
 			return $candidate.FullName
+		}
+	}
+	return ""
+}
+
+function Resolve-SmokeCli {
+	$candidates = @(
+		(Join-Path $addonRoot "libs\stable-diffusion\build\bin\Release\sd-cli.exe"),
+		(Join-Path $addonRoot "libs\stable-diffusion\bin\vs\sd-cli.exe"),
+		(Join-Path $addonRoot "libs\variants\$Backend\stable-diffusion\bin\vs\sd-cli.exe")
+	)
+	foreach ($candidate in $candidates) {
+		if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+			return $candidate
 		}
 	}
 	return ""
@@ -116,12 +136,58 @@ function Invoke-SmokeStep {
 	}
 }
 
+function Invoke-ModelInference {
+	param(
+		[string]$Executable,
+		[string]$ModelPath,
+		[string]$ImagePath
+	)
+	$arguments = @(
+		"--backend", $Backend,
+		"-m", $ModelPath,
+		"-p", $Prompt,
+		"-W", [string]$Width,
+		"-H", [string]$Height,
+		"--steps", [string]$Steps,
+		"--cfg-scale", "1",
+		"--sampling-method", "euler",
+		"-s", [string]$Seed,
+		"-o", $ImagePath
+	)
+	$output = @()
+	$exitCode = 1
+	$started = Get-Date
+	$previousErrorActionPreference = $ErrorActionPreference
+	try {
+		$ErrorActionPreference = "Continue"
+		$output = & $Executable @arguments 2>&1 | ForEach-Object { "$_" }
+		$exitCode = $LASTEXITCODE
+	} catch {
+		$output += "$_"
+	} finally {
+		$ErrorActionPreference = $previousErrorActionPreference
+	}
+	$imageReady = Test-Path -LiteralPath $ImagePath -PathType Leaf
+	$outputBytes = if ($imageReady) { (Get-Item -LiteralPath $ImagePath).Length } else { 0 }
+	return [ordered]@{
+		Name = "Stable Diffusion model inference"
+		Passed = ($exitCode -eq 0 -and $outputBytes -ge 1000)
+		ExitCode = $exitCode
+		Output = $output
+		OutputPath = $ImagePath
+		OutputBytes = $outputBytes
+		ElapsedMs = [int]((Get-Date) - $started).TotalMilliseconds
+	}
+}
+
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $addonRoot = (Resolve-Path (Join-Path $scriptRoot "..")).Path
 $doctorScript = Join-Path $scriptRoot "doctor-stable-diffusion.ps1"
 $testScript = Join-Path $scriptRoot "run-tests.ps1"
 $buildDryRunScript = Join-Path $scriptRoot "test-build-stable-diffusion-dry-run.ps1"
 $resolvedModel = Resolve-SmokeModel -ConfiguredModel $Model
+$resolvedCli = Resolve-SmokeCli
+$cliReady = ![string]::IsNullOrWhiteSpace($resolvedCli)
 if ([string]::IsNullOrWhiteSpace($BuildDir)) {
 	$BuildDir = Join-Path ([System.IO.Path]::GetTempPath()) "ofxGgmlStableDiffusion-runtime-smoke"
 }
@@ -151,6 +217,8 @@ $plan = [ordered]@{
 	ModelPath = $(if ($modelReady) { $resolvedModel } else { "<not-configured>" })
 	Ready = [bool]$ready
 	ModelReady = [bool]$modelReady
+	CliPath = $(if ($cliReady) { $resolvedCli } else { "<not-found>" })
+	CliReady = [bool]$cliReady
 	ModelBacked = $false
 	RuntimeMatches = @($runtimeMatches)
 	SmokeKind = "stable-diffusion-wrapper-boundary"
@@ -159,7 +227,8 @@ $plan = [ordered]@{
 		"scripts\run-stable-diffusion-runtime-smoke.bat -DryRun",
 		"scripts\run-stable-diffusion-runtime-smoke.bat -Json -SummaryOnly",
 		"scripts\run-stable-diffusion-runtime-smoke.bat -Json -SummaryOnly -OutputPath .stable-diffusion-runtime-smoke.json",
-		"scripts\run-stable-diffusion-runtime-smoke.bat -RequireModel -Json -SummaryOnly -OutputPath .stable-diffusion-runtime-smoke.json"
+		"scripts\run-stable-diffusion-runtime-smoke.bat -RequireModel -Json -SummaryOnly -OutputPath .stable-diffusion-runtime-smoke.json",
+		"scripts\run-stable-diffusion-runtime-smoke.bat -InferenceOnly -Model C:\path\to\model.safetensors -Backend cpu -Json -SummaryOnly"
 	)
 }
 
@@ -180,7 +249,7 @@ if ($DryRun) {
 	return
 }
 
-if ($RequireModel -and -not $modelReady) {
+if (($RequireModel -or $InferenceOnly) -and -not $modelReady) {
 	throw "No Stable Diffusion model was found. Set OFXGGML_STABLE_DIFFUSION_MODEL or pass -Model."
 }
 if ($Clean -and (Test-GeneratedBuildDir -Path $BuildDir) -and (Test-Path -LiteralPath $BuildDir)) {
@@ -191,28 +260,52 @@ New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
 $started = Get-Date
 $powerShell = Get-PowerShellExecutable
 $results = @()
-$results += Invoke-SmokeStep -Name "Stable Diffusion doctor" -Arguments @(
-	"-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $doctorScript, "-Json"
-)
-$results += Invoke-SmokeStep -Name "Stable Diffusion build dry-runs" -Arguments @(
-	"-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $buildDryRunScript
-)
-$results += Invoke-SmokeStep -Name "Stable Diffusion wrapper tests" -Arguments @(
-	"-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $testScript, "-Configuration", $Configuration, "-BuildDir", (Join-Path $BuildDir "tests")
-)
+if (!$InferenceOnly) {
+	$results += Invoke-SmokeStep -Name "Stable Diffusion doctor" -Arguments @(
+		"-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $doctorScript, "-Json"
+	)
+	$results += Invoke-SmokeStep -Name "Stable Diffusion build dry-runs" -Arguments @(
+		"-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $buildDryRunScript
+	)
+	$results += Invoke-SmokeStep -Name "Stable Diffusion wrapper tests" -Arguments @(
+		"-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $testScript, "-Configuration", $Configuration, "-BuildDir", (Join-Path $BuildDir "tests")
+	)
+}
+$modelInference = $null
+if ($modelReady) {
+	$modelOutputPath = Join-Path $BuildDir "stable-diffusion-smoke.png"
+	if ($cliReady) {
+		$modelInference = Invoke-ModelInference -Executable $resolvedCli -ModelPath $resolvedModel -ImagePath $modelOutputPath
+	} else {
+		$modelInference = [ordered]@{
+			Name = "Stable Diffusion model inference"
+			Passed = $false
+			ExitCode = 1
+			Output = @("Stable Diffusion CLI was not found.")
+			OutputPath = $modelOutputPath
+			OutputBytes = 0
+			ElapsedMs = 0
+		}
+	}
+	$results += $modelInference
+}
 
 $failed = @($results | Where-Object { -not $_.Passed })
+$inferenceChecked = ($null -ne $modelInference -and [bool]$modelInference.Passed)
 $elapsedMs = [int]((Get-Date) - $started).TotalMilliseconds
 $summary = [ordered]@{
 	Name = "ofxGgmlStableDiffusion runtime smoke"
 	Passed = ($failed.Count -eq 0)
-	InferenceChecked = $false
-	SmokeKind = "stable-diffusion-wrapper-boundary"
-	Backend = "stable-diffusion.cpp"
+	InferenceChecked = [bool]$inferenceChecked
+	SmokeKind = $(if ($inferenceChecked) { "model-backed-cli-image" } else { "stable-diffusion-wrapper-boundary" })
+	Backend = $Backend
+	RuntimeProvider = "stable-diffusion.cpp"
 	ModelPath = $(if ($modelReady) { $resolvedModel } else { "<not-configured>" })
 	Configuration = $Configuration
 	BuildDir = $BuildDir
-	ModelBacked = $false
+	ModelBacked = [bool]$inferenceChecked
+	InferenceOutputPath = $(if ($null -ne $modelInference) { [string]$modelInference.OutputPath } else { "" })
+	InferenceOutputBytes = $(if ($null -ne $modelInference) { [long]$modelInference.OutputBytes } else { 0 })
 	RuntimeMatched = ($runtimeMatches.Count -gt 0)
 	RuntimeMatches = @($runtimeMatches)
 	ResultCount = $results.Count

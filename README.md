@@ -462,6 +462,21 @@ You can also use:
 - `scripts/run-tests.sh`
 - `scripts/run-stable-diffusion-runtime-smoke.ps1 -Json -SummaryOnly`
 
+Automatic runtime-smoke model discovery considers `.safetensors` and `.ckpt`
+files only. Pass `-Model` or set `OFXGGML_STABLE_DIFFUSION_MODEL` when using an
+explicit compatibility path; unrelated text-model GGUF files are not selected
+as Stable Diffusion readiness evidence.
+
+When a model is configured, the runtime smoke also invokes the bundled
+`sd-cli`, renders a deterministic 256x256 image, verifies the output artifact,
+and reports `ModelBacked` and `InferenceChecked` only after that render passes.
+Use `-Backend cpu` for CPU evidence or the matching supported backend name for
+accelerated evidence.
+
+Use `-InferenceOnly` to require and execute the real model render without
+coupling its result to wrapper compilation. The default mode continues to run
+doctor, build dry-runs, wrapper tests, and model inference when configured.
+
 Test notes: [tests/README.md](tests/README.md)
 
 ## Starter Example
