@@ -76,6 +76,8 @@ struct ofxGgmlStableDiffusionContextSettings {
 	bool flashAttn = false;
 	bool diffusionFlashAttn = false;
 	bool enableMmap = true;
+	std::string backend;
+	std::string paramsBackend;
 
 	bool operator==(const ofxGgmlStableDiffusionContextSettings& rhs) const {
 		return modelPath == rhs.modelPath &&
@@ -104,7 +106,9 @@ struct ofxGgmlStableDiffusionContextSettings {
 			offloadParamsToCpu == rhs.offloadParamsToCpu &&
 			flashAttn == rhs.flashAttn &&
 			diffusionFlashAttn == rhs.diffusionFlashAttn &&
-			enableMmap == rhs.enableMmap;
+			enableMmap == rhs.enableMmap &&
+			backend == rhs.backend &&
+			paramsBackend == rhs.paramsBackend;
 	}
 
 	bool operator!=(const ofxGgmlStableDiffusionContextSettings& rhs) const {

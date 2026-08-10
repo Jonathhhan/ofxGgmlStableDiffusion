@@ -406,8 +406,6 @@ sd_ctx_t* ofxGgmlStableDiffusionModelManager::loadModelContext(const ofxGgmlStab
 	ctxParams.taesd_path = emptyToNull(modelInfo.taesdPath);
 	ctxParams.control_net_path = emptyToNull(modelInfo.controlNetPath);
 	ctxParams.photo_maker_path = nullptr;
-	ctxParams.vae_decode_only = false;
-	ctxParams.free_params_immediately = false;
 	ctxParams.n_threads = -1;  // auto
 	ctxParams.wtype = modelInfo.weightType;
 	ctxParams.rng_type = CUDA_RNG;

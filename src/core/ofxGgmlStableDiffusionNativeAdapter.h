@@ -229,21 +229,17 @@ inline sd_ctx_params_t buildContextParams(
 	params.photo_maker_path = emptyToNull(settings.stackedIdEmbedDir);
 	params.embeddings = embeddings.empty() ? nullptr : embeddings.data();
 	params.embedding_count = static_cast<uint32_t>(embeddings.size());
-	params.vae_decode_only = settings.vaeDecodeOnly;
-	params.free_params_immediately = settings.freeParamsImmediately;
 	params.n_threads = settings.nThreads;
 	params.wtype = settings.weightType;
 	params.rng_type = settings.rngType;
 	params.sampler_rng_type = RNG_TYPE_COUNT;
 	params.prediction = settings.prediction;
 	params.lora_apply_mode = settings.loraApplyMode;
-	params.offload_params_to_cpu = settings.offloadParamsToCpu;
 	params.enable_mmap = settings.enableMmap;
-	params.keep_clip_on_cpu = settings.keepClipOnCpu;
-	params.keep_control_net_on_cpu = settings.keepControlNetCpu;
-	params.keep_vae_on_cpu = settings.keepVaeOnCpu;
 	params.flash_attn = settings.flashAttn;
 	params.diffusion_flash_attn = settings.diffusionFlashAttn;
+	params.backend = emptyToNull(settings.backend);
+	params.params_backend = emptyToNull(settings.paramsBackend);
 	return params;
 }
 

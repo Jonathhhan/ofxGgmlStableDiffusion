@@ -77,5 +77,8 @@ private:
     bool generating = false;
     bool modelLoadInProgress = false;
     bool modelLoaded = false;
+	bool smokeMode = false;
+	bool smokeStarted = false;
+	std::string smokeOutputPath;
     std::atomic<float> progress{0.0f};
 };

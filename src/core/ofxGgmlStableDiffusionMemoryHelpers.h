@@ -21,9 +21,5 @@ inline void ofxSdReleaseImageArray(sd_image_t* images, int count) {
 	if (!images) {
 		return;
 	}
-	const int safeCount = std::max(count, 0);
-	for (int i = 0; i < safeCount; ++i) {
-		ofxSdReleaseImage(images[i]);
-	}
-	free(images);
+	free_sd_images(images, std::max(count, 0));
 }

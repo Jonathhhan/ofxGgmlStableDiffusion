@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
 #include <fstream>
 
 namespace {
@@ -149,6 +150,16 @@ bool drawResolvedCombo(
 
 //--------------------------------------------------------------
 void ofApp::setup() {
+	const char* smokeModel = std::getenv("OFXGGML_SD_SMOKE_MODEL");
+	const char* smokeOutput = std::getenv("OFXGGML_SD_SMOKE_OUTPUT");
+	smokeMode = smokeModel && *smokeModel && smokeOutput && *smokeOutput;
+	if (smokeMode) {
+		smokeOutputPath = smokeOutput;
+		width = 256;
+		height = 256;
+		sampleSteps = 2;
+		batchCount = 1;
+	}
     progress.store(0.0f);
     statusMessage = "Ready";
     prompt = "A serene mountain landscape at sunset, photorealistic";
@@ -172,8 +183,9 @@ void ofApp::setup() {
         progress.store(value);
     });
 
-    const std::string lastModelPath = loadSavedModelPath();
-    loadModel(lastModelPath.empty() ? ofToDataPath("models/sd_v1.5.safetensors") : lastModelPath);
+	const std::string lastModelPath = loadSavedModelPath();
+	loadModel(smokeMode ? std::string(smokeModel) :
+		(lastModelPath.empty() ? ofToDataPath("models/sd_v1.5.safetensors") : lastModelPath));
 
     ofLogNotice() << "Ready. Use the ImGui panel or press SPACE to generate an image.";
 }
@@ -193,7 +205,7 @@ void ofApp::update() {
         lastResolvedSchedulerIndex = static_cast<int>(sd.getResolvedScheduler(requestedSampleMethod, SCHEDULER_COUNT));
     }
 
-    if (modelLoadInProgress && !sd.isBusy()) {
+	if (modelLoadInProgress && !sd.isBusy()) {
         modelLoadInProgress = false;
         modelLoaded = sd.hasLoadedContext();
         if (modelLoaded) {
@@ -207,18 +219,29 @@ void ofApp::update() {
             statusMessage = "Model loaded: " + displayFileName(modelPath);
         } else {
             statusMessage.clear();
-        }
+	}
+	if (smokeMode && modelLoaded && !smokeStarted && !sd.isBusy()) {
+		smokeStarted = true;
+		startGeneration();
+	}
     }
 
     // Check if generation just completed
     if (wasGenerating && !generating && sd.hasImageResult()) {
         // Get the first generated image
         auto images = sd.getImages();
-        if (!images.empty()) {
-            resultImage.setFromPixels(images[0].pixels);
+		if (!images.empty()) {
+			resultImage.setFromPixels(images[0].pixels);
             statusMessage = "Generation complete. Seed: " + ofToString(sd.getLastUsedSeed());
             ofLogNotice() << statusMessage;
-        }
+		}
+		if (smokeMode && resultImage.isAllocated()) {
+			const bool saved = resultImage.save(smokeOutputPath);
+			ofLogNotice("ofxGgmlStableDiffusionSmoke")
+				<< "OF_WRAPPER_CUDA_SMOKE=" << (saved ? "PASS" : "FAIL")
+				<< " output=" << smokeOutputPath;
+			ofExit(saved ? 0 : 2);
+		}
 
         // Check for errors
         auto error = sd.getLastErrorInfo();
@@ -440,7 +463,11 @@ void ofApp::loadModel(const std::string& path) {
     ofxGgmlStableDiffusionContextSettings settings;
     settings.modelPath = modelPath;
     settings.weightType = SD_TYPE_COUNT;
-    settings.nThreads = -1;
+	settings.nThreads = -1;
+	if (smokeMode) {
+		settings.backend = "cuda";
+		settings.paramsBackend = "cuda";
+	}
     sd.configureContext(settings);
 
     if (!sd.isBusy()) {

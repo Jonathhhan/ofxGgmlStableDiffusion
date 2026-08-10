@@ -511,6 +511,8 @@ public:
 	bool flashAttn = false;
 	bool diffusionFlashAttn = false;
 	bool enableMmap = true;
+	std::string backend;
+	std::string paramsBackend;
 	float styleStrength = 20.0f;
 	int nThreads = -1;
 	int esrganMultiplier = 4;

@@ -252,6 +252,8 @@ std::string ofxGgmlStableDiffusionThread::computeContextFingerprint(const ofxGgm
 	fp += settings.loraModelDir;       sep();
 	fp += settings.embedDir;           sep();
 	fp += settings.stackedIdEmbedDir;  sep();
+	fp += settings.backend;            sep();
+	fp += settings.paramsBackend;      sep();
 	fp += static_cast<char>(settings.vaeDecodeOnly);
 	fp += static_cast<char>(settings.vaeTiling);
 	fp += static_cast<char>(settings.freeParamsImmediately);
@@ -398,7 +400,6 @@ void ofxGgmlStableDiffusionThread::threadedFunction() {
 		if (contextTaskData.upscalerSettings.enabled && !contextTaskData.upscalerSettings.modelPath.empty()) {
 			upscalerCtx = new_upscaler_ctx(
 				contextTaskData.upscalerSettings.modelPath.c_str(),
-				false,
 				false,
 				contextTaskData.upscalerSettings.nThreads,
 				0,
@@ -601,7 +602,10 @@ void ofxGgmlStableDiffusionThread::threadedFunction() {
 							generationCallbackMutex(),
 							videoTaskData.progressCallback ? threadProgressCallback : nullptr,
 							videoTaskData.progressCallback ? this : nullptr);
-						frameOutput = generate_image(sdCtx, &frameParams);
+						int frameOutputCount = 0;
+						if (!generate_image(sdCtx, &frameParams, &frameOutput, &frameOutputCount) || frameOutputCount < 1) {
+							frameOutput = nullptr;
+						}
 					}
 					if (!frameOutput || !frameOutput[0].data) {
 						ofxSdReleaseImageArray(frameOutput, 1);
@@ -622,9 +626,10 @@ void ofxGgmlStableDiffusionThread::threadedFunction() {
 							break;
 						}
 
-						sd_image_t upscaled =
-							upscale(upscalerCtx, frameOutput[0], videoTaskData.upscalerSettings.multiplier);
-						if (!upscaled.data) {
+						sd_image_t* upscaledOutput = nullptr;
+						int upscaledCount = 0;
+						if (!upscale(upscalerCtx, frameOutput[0], videoTaskData.upscalerSettings.multiplier,
+								&upscaledOutput, &upscaledCount) || !upscaledOutput || upscaledCount < 1) {
 							ofxSdReleaseImageArray(frameOutput, 1);
 							sd->setLastError(
 								ofxGgmlStableDiffusionErrorCode::UpscaleFailed,
@@ -634,7 +639,8 @@ void ofxGgmlStableDiffusionThread::threadedFunction() {
 						}
 
 						ofxSdReleaseImage(frameOutput[0]);
-						frameOutput[0] = upscaled;
+						frameOutput[0] = upscaledOutput[0];
+						free(upscaledOutput);
 					}
 
 					if (isCancellationRequested()) {
@@ -790,7 +796,10 @@ void ofxGgmlStableDiffusionThread::threadedFunction() {
 			generationCallbackMutex(),
 			imageTaskData.progressCallback ? threadProgressCallback : nullptr,
 			imageTaskData.progressCallback ? this : nullptr);
-		output = generate_image(sdCtx, &params);
+		int outputCount = 0;
+		if (!generate_image(sdCtx, &params, &output, &outputCount) || outputCount < 1) {
+			output = nullptr;
+		}
 	}
 
 	if (output && imageTaskData.upscalerSettings.enabled) {
@@ -802,16 +811,18 @@ void ofxGgmlStableDiffusionThread::threadedFunction() {
 		}
 
 		for (int i = 0; i < imageTaskData.request.batchCount; i++) {
-			sd_image_t upscaled = upscale(upscalerCtx, output[i], imageTaskData.upscalerSettings.multiplier);
-			if (!upscaled.data) {
-				ofxSdReleaseImage(output[i]);
+			sd_image_t* upscaledOutput = nullptr;
+			int upscaledCount = 0;
+			if (!upscale(upscalerCtx, output[i], imageTaskData.upscalerSettings.multiplier,
+					&upscaledOutput, &upscaledCount) || !upscaledOutput || upscaledCount < 1) {
 				ofxSdReleaseImageArray(output, imageTaskData.request.batchCount);
 				sd->setLastError(ofxGgmlStableDiffusionErrorCode::UpscaleFailed, "Upscaling failed for one or more images");
 				finishTask();
 				return;
 			}
 			ofxSdReleaseImage(output[i]);
-			output[i] = upscaled;
+			output[i] = upscaledOutput[0];
+			free(upscaledOutput);
 		}
 	}
 

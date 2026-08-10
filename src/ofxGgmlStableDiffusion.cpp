@@ -1931,7 +1931,7 @@ void ofxGgmlStableDiffusion::newUpscalerCtx(const std::string& esrganPath_,
 		thread.upscalerCtx = nullptr;
 	}
 
-	thread.upscalerCtx = new_upscaler_ctx(esrganPath_.c_str(), false, false, nThreads_, 0, nullptr, nullptr);
+	thread.upscalerCtx = new_upscaler_ctx(esrganPath_.c_str(), false, nThreads_, 0, nullptr, nullptr);
 	if (!thread.upscalerCtx) {
 		{
 			std::lock_guard<std::mutex> lock(stateMutex);
@@ -1976,7 +1976,16 @@ sd_image_t ofxGgmlStableDiffusion::upscaleImage(sd_image_t inputImage_, uint32_t
 		setLastError(ofxGgmlStableDiffusionErrorCode::UpscaleFailed, "Upscaler context is not initialized");
 		return {0, 0, 0, nullptr};
 	}
-	return upscale(thread.upscalerCtx, inputImage_, upscaleFactor);
+	sd_image_t* output = nullptr;
+	int outputCount = 0;
+	if (!upscale(thread.upscalerCtx, inputImage_, upscaleFactor, &output, &outputCount) ||
+		!output || outputCount < 1) {
+		setLastError(ofxGgmlStableDiffusionErrorCode::UpscaleFailed, "Upscaling returned no image");
+		return {0, 0, 0, nullptr};
+	}
+	sd_image_t result = output[0];
+	free(output);
+	return result;
 }
 
 bool ofxGgmlStableDiffusion::convert(const char* inputPath_, const char* vaePath_, const char* outputPath_, sd_type_t outputType_) {
@@ -2159,6 +2168,8 @@ ofxGgmlStableDiffusionContextSettings ofxGgmlStableDiffusion::captureContextSett
 	settings.flashAttn = flashAttn;
 	settings.diffusionFlashAttn = diffusionFlashAttn;
 	settings.enableMmap = enableMmap;
+	settings.backend = backend;
+	settings.paramsBackend = paramsBackend;
 	return settings;
 }
 
@@ -2198,6 +2209,8 @@ void ofxGgmlStableDiffusion::applyContextSettings(const ofxGgmlStableDiffusionCo
 	flashAttn = resolvedSettings.flashAttn;
 	diffusionFlashAttn = resolvedSettings.diffusionFlashAttn;
 	enableMmap = resolvedSettings.enableMmap;
+	backend = resolvedSettings.backend;
+	paramsBackend = resolvedSettings.paramsBackend;
 }
 
 bool ofxGgmlStableDiffusion::applyImageRequest(const ofxGgmlStableDiffusionImageRequest& request) {

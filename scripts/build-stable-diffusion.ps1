@@ -28,7 +28,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$DefaultSourceReleaseTag = "master-666-7948df8"
+$DefaultSourceReleaseTag = "master-813-bfbef5b"
 
 if ($UseSystemGgml -and $UseBundledGgml) {
     throw "Choose either -UseSystemGgml or -UseBundledGgml, not both."
@@ -509,6 +509,21 @@ function Require-MSBuildPath {
         return $msbuild
     }
 
+    $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    if (Test-Path -LiteralPath $vswhere -PathType Leaf) {
+        $msbuild = & $vswhere `
+            -latest `
+            -products '*' `
+            -requires Microsoft.Component.MSBuild `
+            -property installationPath |
+            ForEach-Object { Join-Path $_ 'MSBuild\Current\Bin\amd64\MSBuild.exe' } |
+            Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } |
+            Select-Object -First 1
+        if ($msbuild) {
+            return $msbuild
+        }
+    }
+
     $candidates = @(
         "${env:ProgramFiles}\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\amd64\MSBuild.exe",
         "${env:ProgramFiles}\Microsoft Visual Studio\18\Professional\MSBuild\Current\Bin\amd64\MSBuild.exe",
@@ -585,7 +600,18 @@ function Remove-DirectoryContents {
 
     Get-ChildItem -LiteralPath $LiteralPath -Force -ErrorAction SilentlyContinue |
         ForEach-Object {
-            Remove-Item -LiteralPath $_.FullName -Recurse -Force
+            $itemPath = $_.FullName
+            try {
+                Remove-Item -LiteralPath $itemPath -Recurse -Force -ErrorAction Stop
+            } catch [System.IO.DirectoryNotFoundException] {
+                if (Test-Path -LiteralPath $itemPath) {
+                    $quarantineRoot = Join-Path ([System.IO.Path]::GetTempPath()) 'ofxsd-source-cleanup-quarantine'
+                    New-Item -ItemType Directory -Force -Path $quarantineRoot | Out-Null
+                    $quarantinePath = Join-Path $quarantineRoot ((Split-Path -Leaf $itemPath) + '-' + [Guid]::NewGuid().ToString('N'))
+                    Move-Item -LiteralPath $itemPath -Destination $quarantinePath
+                    Write-Warning "Moved an undeletable stale source subtree to: $quarantinePath"
+                }
+            }
         }
 }
 
@@ -1167,6 +1193,10 @@ $configureArgs = @(
     '-DSD_BUILD_SHARED_LIBS=ON',
     ('-DSD_BUILD_EXAMPLES=' + ($(if ($BuildCli) { 'ON' } else { 'OFF' })))
 )
+
+if (Test-IsWindowsHost) {
+    $configureArgs += '-DCMAKE_CXX_FLAGS=/bigobj'
+}
 
 if ($vendoredCommit -or $vendoredTargetCommit) {
     $cmakeVendoredCommit = if ($vendoredCommit) { $vendoredCommit } else { $vendoredTargetCommit }
