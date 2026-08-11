@@ -20,6 +20,7 @@ private:
 	void syncRequestFromUi();
 	void configureContext();
 	void browseModelPath(std::string& path, std::array<char, 512>& input);
+	bool browseImagePath(const std::string& title, std::string& path, std::array<char, 512>& input);
 	void startGeneration();
 	void cancelGeneration();
 	bool loadImageSlot(const std::string& path, ofImage& image, ofPixels& pixels, sd_image_t& view);

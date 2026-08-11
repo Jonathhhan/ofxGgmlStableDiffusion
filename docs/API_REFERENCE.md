@@ -206,6 +206,12 @@ Model and runtime configuration.
 - `freeParamsImmediately` - Free memory after generation
 - `rngType` - Random number generator type
 - `diffusionFlashAttn` - Flash attention
+- `maxVram` - Native GiB budget or per-device budget assignment for graph-split execution
+- `streamLayers` - Stream layer weights when a VRAM budget activates segmented execution
+- `eagerLoad` - Load parameters at context creation instead of first use where supported
+- `backend`, `paramsBackend` - Native module/device and parameter-residency assignments
+- `splitMode` - Multi-device `layer`, `row`, or per-module split assignment
+- `autoFit` - Plan component placement from model sizes and available device memory
 - `cacheMode` - Cache optimization mode
 
 ## Error Handling

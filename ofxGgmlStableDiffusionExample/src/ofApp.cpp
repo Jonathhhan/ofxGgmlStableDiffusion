@@ -1,6 +1,10 @@
 #include "ofApp.h"
 
+#include "imgui_stdlib.h"
+
 #include <algorithm>
+#include <fstream>
+#include <vector>
 
 namespace {
 
@@ -12,6 +16,16 @@ std::string displayFileName(const std::string& path) {
 	return path.substr(slash + 1);
 }
 
+bool isSupportedModelPath(const std::string& path) {
+	const std::size_t dot = path.find_last_of('.');
+	if (dot == std::string::npos) {
+		return false;
+	}
+	std::string extension = ofxGgmlStableDiffusionExampleLower(path.substr(dot + 1));
+	return extension == "safetensors" || extension == "ckpt" ||
+		extension == "gguf" || extension == "ggml";
+}
+
 }
 
 //--------------------------------------------------------------
@@ -20,12 +34,10 @@ void ofApp::setup() {
 	ofSetFrameRate(60);
 	ofSetLogLevel(OF_LOG_WARNING);
 
-	modelPath = ofToDataPath("models/sd_v1.5.safetensors");
+	modelPath = findInitialModelPath();
+	loadRuntimePreferences();
 	prompt = "A serene mountain landscape at sunset, photorealistic";
 	negativePrompt = "blurry, low quality, distorted";
-	ofxGgmlStableDiffusionExampleCopyToInput(modelPath, modelPathInput);
-	ofxGgmlStableDiffusionExampleCopyToInput(prompt, promptInput);
-	ofxGgmlStableDiffusionExampleCopyToInput(negativePrompt, negativePromptInput);
 
 	auto window = ofGetCurrentWindow();
 	const auto setupState = gui.setup(window, nullptr, true, ImGuiConfigFlags_None, true);
@@ -40,7 +52,12 @@ void ofApp::setup() {
 		progress.store(value);
 	});
 
-	configureContext();
+	if (!modelPath.empty()) {
+		configureContext();
+	} else {
+		modelSummary = "No local image model found";
+		statusMessage = "Paste a model path or use Browse...";
+	}
 }
 
 //--------------------------------------------------------------
@@ -53,6 +70,8 @@ void ofApp::update() {
 		if (stableDiffusion.hasLoadedContext()) {
 			modelSummary = "Loaded: " + displayFileName(modelPath);
 			statusMessage = "Model loaded";
+			saveLoadedModelPath();
+			saveRuntimePreferences();
 		} else {
 			const auto error = stableDiffusion.getLastErrorInfo();
 			modelSummary = "Place a Stable Diffusion image model in bin/data/models/.";
@@ -94,7 +113,7 @@ void ofApp::draw() {
 	}
 
 	gui.begin();
-	ImGui::SetNextWindowSize(ImVec2(520.0f, 520.0f), ImGuiCond_Once);
+	ImGui::SetNextWindowSize(ImVec2(560.0f, 620.0f), ImGuiCond_Once);
 	if (ImGui::Begin("Stable Diffusion Starter")) {
 		const bool busy = stableDiffusion.isBusy();
 		ImGui::TextWrapped("%s", statusMessage.c_str());
@@ -105,9 +124,7 @@ void ofApp::draw() {
 		}
 		ImGui::Separator();
 
-		if (ImGui::InputText("Model", modelPathInput.data(), modelPathInput.size())) {
-			syncRequestFromUi();
-		}
+		ImGui::InputText("Model", &modelPath);
 		if (busy) {
 			ImGui::BeginDisabled();
 		}
@@ -121,14 +138,21 @@ void ofApp::draw() {
 		if (busy) {
 			ImGui::EndDisabled();
 		}
+		if (ImGui::CollapsingHeader("Runtime and GPU memory")) {
+			ImGui::InputText("Max VRAM", &maxVram);
+			ImGui::InputText("Split mode", &splitMode);
+			ImGui::Checkbox("Auto-fit devices", &autoFit);
+			ImGui::Checkbox("Stream layers", &streamLayers);
+			ImGui::Checkbox("Eager-load weights", &eagerLoad);
+			ImGui::TextWrapped(
+				"Max VRAM accepts values such as 6, -1, or cuda0=6,cuda1=8. "
+				"Split mode may be layer, row, or a per-module assignment. "
+				"Changes take effect on the next context load.");
+		}
 
 		ImGui::Separator();
-		if (ImGui::InputTextMultiline("Prompt", promptInput.data(), promptInput.size(), ImVec2(-1.0f, 90.0f))) {
-			syncRequestFromUi();
-		}
-		if (ImGui::InputTextMultiline("Negative", negativePromptInput.data(), negativePromptInput.size(), ImVec2(-1.0f, 56.0f))) {
-			syncRequestFromUi();
-		}
+		ImGui::InputTextMultiline("Prompt", &prompt, ImVec2(-1.0f, 90.0f));
+		ImGui::InputTextMultiline("Negative", &negativePrompt, ImVec2(-1.0f, 56.0f));
 		ImGui::InputInt("Width", &width, 64, 128);
 		ImGui::InputInt("Height", &height, 64, 128);
 		ImGui::SliderInt("Steps", &sampleSteps, 1, 80);
@@ -171,17 +195,127 @@ void ofApp::draw() {
 }
 
 //--------------------------------------------------------------
+std::string ofApp::getLastModelPathFile() const {
+	return ofToDataPath("last_model.txt", true);
+}
+
+//--------------------------------------------------------------
+std::string ofApp::getRuntimePreferencesFile() const {
+	return ofToDataPath("last_runtime_settings.txt", true);
+}
+
+//--------------------------------------------------------------
+std::string ofApp::findInitialModelPath() const {
+	const std::string configured = ofGetEnv("OFXGGML_STABLE_DIFFUSION_MODEL");
+	if (isSupportedModelPath(configured) && ofFile::doesFileExist(configured)) {
+		return configured;
+	}
+
+	std::ifstream saved(getLastModelPathFile());
+	std::string savedPath;
+	if (saved && std::getline(saved, savedPath) &&
+		isSupportedModelPath(savedPath) && ofFile::doesFileExist(savedPath)) {
+		return savedPath;
+	}
+
+	ofDirectory models(ofToDataPath("models", true));
+	models.allowExt("safetensors");
+	models.allowExt("ckpt");
+	models.allowExt("gguf");
+	models.allowExt("ggml");
+	models.listDir();
+	std::vector<std::string> candidates;
+	for (std::size_t i = 0; i < models.size(); ++i) {
+		const auto& file = models.getFile(static_cast<int>(i));
+		if (file.isFile()) {
+			candidates.push_back(file.getAbsolutePath());
+		}
+	}
+	std::sort(candidates.begin(), candidates.end());
+	if (!candidates.empty()) {
+		return candidates.front();
+	}
+	return "";
+}
+
+//--------------------------------------------------------------
+void ofApp::saveLoadedModelPath() {
+	if (!stableDiffusion.hasLoadedContext() ||
+		!isSupportedModelPath(modelPath) || !ofFile::doesFileExist(modelPath)) {
+		return;
+	}
+	std::ofstream saved(getLastModelPathFile(), std::ios::trunc);
+	if (saved) {
+		saved << modelPath << '\n';
+	}
+}
+
+//--------------------------------------------------------------
+void ofApp::loadRuntimePreferences() {
+	std::ifstream saved(getRuntimePreferencesFile());
+	if (!saved) {
+		return;
+	}
+
+	std::getline(saved, maxVram);
+	std::getline(saved, splitMode);
+	std::string value;
+	if (std::getline(saved, value)) {
+		autoFit = value == "1";
+	}
+	if (std::getline(saved, value)) {
+		streamLayers = value == "1";
+	}
+	if (std::getline(saved, value)) {
+		eagerLoad = value == "1";
+	}
+}
+
+//--------------------------------------------------------------
+void ofApp::saveRuntimePreferences() const {
+	std::ofstream saved(getRuntimePreferencesFile(), std::ios::trunc);
+	if (!saved) {
+		return;
+	}
+	saved << maxVram << '\n'
+		<< splitMode << '\n'
+		<< (autoFit ? 1 : 0) << '\n'
+		<< (streamLayers ? 1 : 0) << '\n'
+		<< (eagerLoad ? 1 : 0) << '\n';
+}
+
+//--------------------------------------------------------------
 void ofApp::configureContext() {
 	if (stableDiffusion.isBusy()) {
 		statusMessage = "Stable Diffusion is busy";
 		return;
 	}
 
-	syncRequestFromUi();
+	if (!isSupportedModelPath(modelPath)) {
+		statusMessage = "Choose a .safetensors, .ckpt, .gguf, or .ggml model";
+		return;
+	}
+	if (!ofFile::doesFileExist(modelPath)) {
+		statusMessage = "Model file not found: " + modelPath;
+		return;
+	}
 	ofxGgmlStableDiffusionContextSettings settings;
 	settings.modelPath = modelPath;
 	settings.weightType = SD_TYPE_COUNT;
 	settings.nThreads = -1;
+	settings.maxVram = maxVram;
+	settings.splitMode = splitMode;
+	settings.autoFit = autoFit;
+	settings.streamLayers = streamLayers;
+	settings.eagerLoad = eagerLoad;
+	const std::string configuredBackend = ofGetEnv("OFXGGML_STABLE_DIFFUSION_BACKEND");
+	if (!configuredBackend.empty()) {
+		settings.backend = configuredBackend;
+		settings.paramsBackend = configuredBackend;
+	} else if (ofxGgmlStableDiffusionExampleSelectedRuntimeLooksCuda()) {
+		settings.backend = "cuda";
+		settings.paramsBackend = "cuda";
+	}
 	stableDiffusion.configureContext(settings);
 
 	contextLoading = stableDiffusion.isBusy();
@@ -192,6 +326,8 @@ void ofApp::configureContext() {
 	} else if (stableDiffusion.hasLoadedContext()) {
 		modelSummary = "Loaded: " + displayFileName(modelPath);
 		statusMessage = "Model loaded";
+		saveLoadedModelPath();
+		saveRuntimePreferences();
 	} else {
 		modelSummary = "Place a Stable Diffusion image model in bin/data/models/.";
 		statusMessage = "Model not loaded";
@@ -205,15 +341,7 @@ void ofApp::browseForModel() {
 		return;
 	}
 	modelPath = result.getPath();
-	ofxGgmlStableDiffusionExampleCopyToInput(modelPath, modelPathInput);
 	statusMessage = "Selected: " + displayFileName(modelPath);
-}
-
-//--------------------------------------------------------------
-void ofApp::syncRequestFromUi() {
-	modelPath = ofxGgmlStableDiffusionExampleInputString(modelPathInput);
-	prompt = ofxGgmlStableDiffusionExampleInputString(promptInput);
-	negativePrompt = ofxGgmlStableDiffusionExampleInputString(negativePromptInput);
 }
 
 //--------------------------------------------------------------
@@ -226,7 +354,6 @@ void ofApp::startGeneration() {
 		return;
 	}
 
-	syncRequestFromUi();
 	ofxGgmlStableDiffusionImageRequest request;
 	request.mode = ofxGgmlStableDiffusionImageMode::TextToImage;
 	request.prompt = prompt;

@@ -27,6 +27,7 @@ private:
 	void applyPromptPreset(int presetIndex);
 	ofxGgmlStableDiffusionContextSettings makeCurrentContextSettings() const;
 	void browseModelPath(std::string& path, std::array<char, 512>& input, bool persistModelPaths = false);
+	bool browseImagePath(const std::string& title, std::string& path, std::array<char, 512>& input);
 	void startGeneration();
 	void cancelGeneration();
 	void loadInputImage();

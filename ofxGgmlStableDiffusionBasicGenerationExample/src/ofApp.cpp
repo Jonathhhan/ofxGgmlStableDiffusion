@@ -362,6 +362,10 @@ void ofApp::draw() {
             if (ImGui::InputText("ID Images Path", inputIdImagesPathInput.data(), inputIdImagesPathInput.size())) {
                 syncRequestFromUi();
             }
+            ImGui::SameLine();
+            if (ImGui::Button("Browse##id-images")) {
+                browseForIdImages();
+            }
 
             ImGui::TextWrapped("LoRA: %s", loraPath.empty() ? "" : displayFileName(loraPath).c_str());
             if (ImGui::Button("Load LoRA...")) {
@@ -537,6 +541,20 @@ void ofApp::browseForLora() {
 
     loraPath = selectedPath;
     statusMessage = "LoRA: " + displayFileName(loraPath);
+}
+
+//--------------------------------------------------------------
+void ofApp::browseForIdImages() {
+    ofFileDialogResult result = ofSystemLoadDialog(
+        "Select PhotoMaker ID images folder",
+        true,
+        inputIdImagesPath);
+    if (!result.bSuccess) {
+        return;
+    }
+    inputIdImagesPath = result.getPath();
+    ofxGgmlStableDiffusionExampleCopyToInput(inputIdImagesPath, inputIdImagesPathInput);
+    statusMessage = "Selected PhotoMaker ID images folder";
 }
 
 //--------------------------------------------------------------

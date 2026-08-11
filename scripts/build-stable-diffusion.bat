@@ -136,6 +136,16 @@ if /i "%~1"=="--use-system-ggml" (
     shift
     goto parse_args
 )
+if /i "%~1"=="--ggml-release-tag" (
+    if "%~2"=="" (
+        echo Error: --ggml-release-tag requires a value.
+        exit /b 1
+    )
+    set "PS_ARGS=!PS_ARGS! -GgmlReleaseTag ""%~2"""
+    shift
+    shift
+    goto parse_args
+)
 if /i "%~1"=="--use-bundled-ggml" (
     set "PS_ARGS=!PS_ARGS! -UseBundledGgml"
     shift
@@ -170,7 +180,8 @@ echo   --gpu, --cuda          Enable CUDA backend
 echo   --vulkan               Enable Vulkan backend
 echo   --metal                Enable Metal backend
 echo   --clean                Remove previous build directory before building
-echo   --source-release-tag TAG       Override the upstream release tag used for the source snapshot ^(default: master-666-7948df8^)
+echo   --source-release-tag TAG       Override the upstream release tag used for the source snapshot ^(default: master-813-bfbef5b^)
+echo   --ggml-release-tag TAG         Override ggml only with --use-bundled-ggml
 echo   --dry-run              Print commands without running them
 echo   --config NAME          Build configuration ^(default: Release^)
 echo   --jobs N               Parallel build jobs

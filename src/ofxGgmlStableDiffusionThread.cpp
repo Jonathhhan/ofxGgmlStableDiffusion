@@ -254,6 +254,8 @@ std::string ofxGgmlStableDiffusionThread::computeContextFingerprint(const ofxGgm
 	fp += settings.stackedIdEmbedDir;  sep();
 	fp += settings.backend;            sep();
 	fp += settings.paramsBackend;      sep();
+	fp += settings.maxVram;            sep();
+	fp += settings.splitMode;          sep();
 	fp += static_cast<char>(settings.vaeDecodeOnly);
 	fp += static_cast<char>(settings.vaeTiling);
 	fp += static_cast<char>(settings.freeParamsImmediately);
@@ -273,6 +275,9 @@ std::string ofxGgmlStableDiffusionThread::computeContextFingerprint(const ofxGgm
 	fp += static_cast<char>(settings.flashAttn);
 	fp += static_cast<char>(settings.diffusionFlashAttn);
 	fp += static_cast<char>(settings.enableMmap);
+	fp += static_cast<char>(settings.streamLayers);
+	fp += static_cast<char>(settings.eagerLoad);
+	fp += static_cast<char>(settings.autoFit);
 	return fp;
 }
 
@@ -603,7 +608,11 @@ void ofxGgmlStableDiffusionThread::threadedFunction() {
 							videoTaskData.progressCallback ? threadProgressCallback : nullptr,
 							videoTaskData.progressCallback ? this : nullptr);
 						int frameOutputCount = 0;
-						if (!generate_image(sdCtx, &frameParams, &frameOutput, &frameOutputCount) || frameOutputCount < 1) {
+						beginNativeGeneration(sdCtx);
+						const bool frameGenerated =
+							generate_image(sdCtx, &frameParams, &frameOutput, &frameOutputCount);
+						endNativeGeneration();
+						if (!frameGenerated || frameOutputCount < 1) {
 							frameOutput = nullptr;
 						}
 					}
@@ -731,7 +740,9 @@ void ofxGgmlStableDiffusionThread::threadedFunction() {
 				generationCallbackMutex(),
 				videoTaskData.progressCallback ? threadProgressCallback : nullptr,
 				videoTaskData.progressCallback ? this : nullptr);
+			beginNativeGeneration(sdCtx);
 			const bool ok = generate_video(sdCtx, &params, &output, &generatedFrameCount, &audio);
+			endNativeGeneration();
 			if (!ok) {
 				output = nullptr;
 				generatedFrameCount = 0;
@@ -797,7 +808,10 @@ void ofxGgmlStableDiffusionThread::threadedFunction() {
 			imageTaskData.progressCallback ? threadProgressCallback : nullptr,
 			imageTaskData.progressCallback ? this : nullptr);
 		int outputCount = 0;
-		if (!generate_image(sdCtx, &params, &output, &outputCount) || outputCount < 1) {
+		beginNativeGeneration(sdCtx);
+		const bool imageGenerated = generate_image(sdCtx, &params, &output, &outputCount);
+		endNativeGeneration();
+		if (!imageGenerated || outputCount < 1) {
 			output = nullptr;
 		}
 	}
@@ -853,7 +867,11 @@ void ofxGgmlStableDiffusionThread::threadedFunction() {
 }
 
 void ofxGgmlStableDiffusionThread::requestCancellation() {
-	cancellationRequested.store(true);
+	cancellationRequested.store(true, std::memory_order_release);
+	std::lock_guard<std::mutex> lock(nativeGenerationMutex);
+	if (activeNativeGenerationContext) {
+		sd_cancel_generation(activeNativeGenerationContext, SD_CANCEL_ALL);
+	}
 }
 
 bool ofxGgmlStableDiffusionThread::isCancellationRequested() const {
@@ -861,5 +879,18 @@ bool ofxGgmlStableDiffusionThread::isCancellationRequested() const {
 }
 
 void ofxGgmlStableDiffusionThread::resetCancellation() {
-	cancellationRequested.store(false);
+	cancellationRequested.store(false, std::memory_order_release);
+}
+
+void ofxGgmlStableDiffusionThread::beginNativeGeneration(sd_ctx_t* context) {
+	std::lock_guard<std::mutex> lock(nativeGenerationMutex);
+	activeNativeGenerationContext = context;
+	if (activeNativeGenerationContext && cancellationRequested.load(std::memory_order_acquire)) {
+		sd_cancel_generation(activeNativeGenerationContext, SD_CANCEL_ALL);
+	}
+}
+
+void ofxGgmlStableDiffusionThread::endNativeGeneration() {
+	std::lock_guard<std::mutex> lock(nativeGenerationMutex);
+	activeNativeGenerationContext = nullptr;
 }

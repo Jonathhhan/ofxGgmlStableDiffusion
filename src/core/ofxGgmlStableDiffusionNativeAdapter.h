@@ -207,6 +207,21 @@ inline void collectPhotoMakerImages(
 	}
 }
 
+inline void applyContextRuntimeOptions(
+	const ofxGgmlStableDiffusionContextSettings& settings,
+	sd_ctx_params_t& params) {
+	params.enable_mmap = settings.enableMmap;
+	params.flash_attn = settings.flashAttn;
+	params.diffusion_flash_attn = settings.diffusionFlashAttn;
+	params.max_vram = emptyToNull(settings.maxVram);
+	params.stream_layers = settings.streamLayers;
+	params.eager_load = settings.eagerLoad;
+	params.backend = emptyToNull(settings.backend);
+	params.params_backend = emptyToNull(settings.paramsBackend);
+	params.split_mode = emptyToNull(settings.splitMode);
+	params.auto_fit = settings.autoFit;
+}
+
 inline sd_ctx_params_t buildContextParams(
 	const ofxGgmlStableDiffusionThread::ContextTaskData& taskData,
 	std::vector<std::string>& embeddingNames,
@@ -235,11 +250,7 @@ inline sd_ctx_params_t buildContextParams(
 	params.sampler_rng_type = RNG_TYPE_COUNT;
 	params.prediction = settings.prediction;
 	params.lora_apply_mode = settings.loraApplyMode;
-	params.enable_mmap = settings.enableMmap;
-	params.flash_attn = settings.flashAttn;
-	params.diffusion_flash_attn = settings.diffusionFlashAttn;
-	params.backend = emptyToNull(settings.backend);
-	params.params_backend = emptyToNull(settings.paramsBackend);
+	applyContextRuntimeOptions(settings, params);
 	return params;
 }
 
@@ -311,6 +322,13 @@ inline sd_img_gen_params_t buildImageParams(
 	}
 
 	return params;
+}
+
+inline void applyVideoTiming(
+	const ofxGgmlStableDiffusionVideoRequest& request,
+	sd_vid_gen_params_t& params) {
+	params.video_frames = request.frameCount;
+	params.fps = request.fps;
 }
 
 inline sd_vid_gen_params_t buildVideoParams(
@@ -388,7 +406,7 @@ inline sd_vid_gen_params_t buildVideoParams(
 		params.strength = request.strength;
 	}
 	params.seed = request.seed;
-	params.video_frames = request.frameCount;
+	applyVideoTiming(request, params);
 	if (std::isfinite(request.vaceStrength)) {
 		params.vace_strength = request.vaceStrength;
 	}
@@ -525,6 +543,7 @@ inline std::string buildResolvedVideoCliCommand(
 	command << " -W " << params.width;
 	command << " -H " << params.height;
 	command << " --video-frames " << params.video_frames;
+	command << " --fps " << params.fps;
 	if (std::isfinite(params.sample_params.eta)) {
 		command << " --eta " << formatCliFloat(params.sample_params.eta);
 	}
@@ -545,6 +564,27 @@ inline std::string buildResolvedVideoCliCommand(
 	}
 	if (settings.flashAttn) {
 		command << " --flash-attn";
+	}
+	if (!settings.maxVram.empty()) {
+		command << " --max-vram " << quoteCliArg(settings.maxVram);
+	}
+	if (settings.streamLayers) {
+		command << " --stream-layers";
+	}
+	if (settings.eagerLoad) {
+		command << " --eager-load";
+	}
+	if (!settings.backend.empty()) {
+		command << " --backend " << quoteCliArg(settings.backend);
+	}
+	if (!settings.paramsBackend.empty()) {
+		command << " --params-backend " << quoteCliArg(settings.paramsBackend);
+	}
+	if (!settings.splitMode.empty()) {
+		command << " --split-mode " << quoteCliArg(settings.splitMode);
+	}
+	if (settings.autoFit) {
+		command << " --auto-fit";
 	}
 	if (settings.offloadParamsToCpu) {
 		command << " --offload-to-cpu";

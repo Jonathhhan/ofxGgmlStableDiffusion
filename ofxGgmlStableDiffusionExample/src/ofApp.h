@@ -5,7 +5,6 @@
 #include "ofxGgmlStableDiffusionExampleHelpers.h"
 #include "ofxImGui.h"
 
-#include <array>
 #include <atomic>
 #include <string>
 
@@ -17,9 +16,14 @@ public:
 	void keyPressed(int key);
 
 private:
+	std::string getLastModelPathFile() const;
+	std::string getRuntimePreferencesFile() const;
+	std::string findInitialModelPath() const;
+	void saveLoadedModelPath();
+	void loadRuntimePreferences();
+	void saveRuntimePreferences() const;
 	void configureContext();
 	void browseForModel();
-	void syncRequestFromUi();
 	void startGeneration();
 	void cancelGeneration();
 	void saveResult();
@@ -29,9 +33,6 @@ private:
 	ofxImGui::Gui gui;
 	ofImage resultImage;
 
-	std::array<char, 512> modelPathInput{};
-	std::array<char, 512> promptInput{};
-	std::array<char, 512> negativePromptInput{};
 	std::string modelPath;
 	std::string prompt;
 	std::string negativePrompt;
@@ -43,6 +44,11 @@ private:
 	int sampleSteps = 20;
 	int seed = -1;
 	float cfgScale = 7.0f;
+	std::string maxVram;
+	std::string splitMode;
+	bool streamLayers = false;
+	bool eagerLoad = false;
+	bool autoFit = false;
 
 	bool imGuiOk = true;
 	bool contextLoading = false;

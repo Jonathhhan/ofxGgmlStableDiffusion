@@ -149,6 +149,10 @@ void ofApp::draw() {
 		if (ImGui::InputText("Control folder", controlFrameDirInput.data(), controlFrameDirInput.size())) {
 			syncRequestFromUi();
 		}
+		ImGui::SameLine();
+		if (ImGui::Button("Browse##control-folder")) {
+			browseControlFrameDirectory();
+		}
 		if (ImGui::Button("Configure Context")) {
 			configureContext();
 		}
@@ -325,6 +329,20 @@ void ofApp::browseModelPath(std::string& path, std::array<char, 512>& input) {
 	path = result.getPath();
 	ofxGgmlStableDiffusionExampleCopyToInput(path, input);
 	statusMessage = "Selected model path";
+}
+
+//--------------------------------------------------------------
+void ofApp::browseControlFrameDirectory() {
+	ofFileDialogResult result = ofSystemLoadDialog(
+		"Select control frame folder",
+		true,
+		controlFrameDir);
+	if (!result.bSuccess) {
+		return;
+	}
+	controlFrameDir = result.getPath();
+	ofxGgmlStableDiffusionExampleCopyToInput(controlFrameDir, controlFrameDirInput);
+	loadControlFrames();
 }
 
 //--------------------------------------------------------------

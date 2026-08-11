@@ -36,6 +36,9 @@ if ($UseSystemGgml -and $UseBundledGgml) {
 if (-not $UseBundledGgml) {
     $UseSystemGgml = $true
 }
+if ($UseSystemGgml -and -not [string]::IsNullOrWhiteSpace($GgmlReleaseTag)) {
+    throw "-GgmlReleaseTag only applies to -UseBundledGgml. The default system lane gets ggml from ofxGgmlCore."
+}
 
 function Write-Step {
     param([string]$Message)
@@ -1069,7 +1072,9 @@ if (-not $SkipSourceRefresh) {
             -ResolvedCommit $resolvedCommit
     }
 
-    Refresh-GgmlVendorTree -GitPath $git -Tag $GgmlReleaseTag -TargetDir (Join-Path $SourceDir 'ggml') -DryRun:$DryRun
+    if ($UseBundledGgml) {
+        Refresh-GgmlVendorTree -GitPath $git -Tag $GgmlReleaseTag -TargetDir (Join-Path $SourceDir 'ggml') -DryRun:$DryRun
+    }
 } else {
     Write-Step "Using existing vendored stable-diffusion source snapshot"
     Write-Host ("    Source dir: {0}" -f $SourceDir)
@@ -1102,7 +1107,9 @@ if (-not (Test-Path -LiteralPath $sourceCmakeLists)) {
     }
 }
 
-Apply-GgufExtraDimensionFoldPatch -SourceDir $SourceDir -DryRun:$DryRun
+if ($UseBundledGgml) {
+    Apply-GgufExtraDimensionFoldPatch -SourceDir $SourceDir -DryRun:$DryRun
+}
 
 # Handle system GGML configuration
 if ($UseSystemGgml) {

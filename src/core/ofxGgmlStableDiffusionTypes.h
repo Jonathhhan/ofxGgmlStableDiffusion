@@ -76,8 +76,17 @@ struct ofxGgmlStableDiffusionContextSettings {
 	bool flashAttn = false;
 	bool diffusionFlashAttn = false;
 	bool enableMmap = true;
+	// Native graph placement and memory management. maxVram accepts the
+	// stable-diffusion.cpp syntax (for example "6", "-1", or "cuda0=6,cuda1=8").
+	std::string maxVram;
+	bool streamLayers = false;
+	bool eagerLoad = false;
 	std::string backend;
 	std::string paramsBackend;
+	// Empty keeps the native default. Other accepted values include "layer",
+	// "row", and per-module assignments such as "diffusion=row,te=layer".
+	std::string splitMode;
+	bool autoFit = false;
 
 	bool operator==(const ofxGgmlStableDiffusionContextSettings& rhs) const {
 		return modelPath == rhs.modelPath &&
@@ -107,8 +116,13 @@ struct ofxGgmlStableDiffusionContextSettings {
 			flashAttn == rhs.flashAttn &&
 			diffusionFlashAttn == rhs.diffusionFlashAttn &&
 			enableMmap == rhs.enableMmap &&
+			maxVram == rhs.maxVram &&
+			streamLayers == rhs.streamLayers &&
+			eagerLoad == rhs.eagerLoad &&
 			backend == rhs.backend &&
-			paramsBackend == rhs.paramsBackend;
+			paramsBackend == rhs.paramsBackend &&
+			splitMode == rhs.splitMode &&
+			autoFit == rhs.autoFit;
 	}
 
 	bool operator!=(const ofxGgmlStableDiffusionContextSettings& rhs) const {

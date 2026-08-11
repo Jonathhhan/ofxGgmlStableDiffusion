@@ -21,6 +21,7 @@ private:
 	void syncRequestFromUi();
 	void configureContext();
 	void browseModelPath(std::string& path, std::array<char, 512>& input);
+	void browseControlFrameDirectory();
 	void loadControlFrames();
 	void clearControlFrames();
 	void startGeneration();

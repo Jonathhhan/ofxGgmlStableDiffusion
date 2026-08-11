@@ -17,10 +17,11 @@ REM   --metal               Enable Metal backend where supported
 REM   --all                 Build every available backend variant and leave the best one active
 REM   --build-cli           Also build and stage sd-cli.exe for native testing
 REM   --select-backend NAME Select an already staged backend variant ^(cpu-only, cuda, vulkan, metal^)
-REM   --ggml-release-tag TAG         Override the upstream ggml release tag used for source builds (default: latest release)
+REM   --source-release-tag TAG       Override stable-diffusion.cpp source release
 REM   --skip-native         Skip native stable-diffusion build
 REM   --jobs N              Parallel build jobs (default: %NUMBER_OF_PROCESSORS%)
 REM   --clean               Remove previous native build directory before building
+REM   --dry-run             Print the resolved build without changing files
 REM   --help                Show this help message
 REM ---------------------------------------------------------------------------
 
@@ -34,9 +35,10 @@ set "METAL_FLAG="
 set "ALL_FLAG="
 set "BUILD_CLI_FLAG="
 set "SELECT_BACKEND_FLAG="
-set "GGML_RELEASE_TAG_FLAG="
+set "SOURCE_RELEASE_TAG_FLAG="
 set "SKIP_NATIVE_FLAG="
 set "CLEAN_FLAG="
+set "DRY_RUN_FLAG="
 
 :parse_args
 if "%~1"=="" goto done_args
@@ -112,12 +114,12 @@ if /i "%~1"=="--select-backend" (
     shift
     goto parse_args
 )
-if /i "%~1"=="--ggml-release-tag" (
+if /i "%~1"=="--source-release-tag" (
     if "%~2"=="" (
-        echo Error: --ggml-release-tag requires a value.
+        echo Error: --source-release-tag requires a value.
         exit /b 1
     )
-    set "GGML_RELEASE_TAG_FLAG=-GgmlReleaseTag ""%~2"""
+    set "SOURCE_RELEASE_TAG_FLAG=-SourceReleaseTag ""%~2"""
     shift
     shift
     goto parse_args
@@ -142,6 +144,11 @@ if /i "%~1"=="--clean" (
     shift
     goto parse_args
 )
+if /i "%~1"=="--dry-run" (
+    set "DRY_RUN_FLAG=-DryRun"
+    shift
+    goto parse_args
+)
 if /i "%~1"=="--help" goto usage
 if /i "%~1"=="-h" goto usage
 echo Error: Unknown option: %~1
@@ -161,16 +168,17 @@ echo   --metal               Enable Metal backend where supported
 echo   --all                 Build every available backend variant and leave the best one active
 echo   --build-cli           Also build and stage sd-cli.exe for native testing
 echo   --select-backend NAME Select an already staged backend variant ^(cpu-only, cuda, vulkan, metal^)
-echo   --ggml-release-tag TAG         Override the upstream ggml release tag used for source builds ^(default: latest release^)
+echo   --source-release-tag TAG       Override stable-diffusion.cpp source release ^(default: master-813-bfbef5b^)
 echo   --skip-native         Skip native stable-diffusion build
 echo   --jobs N              Parallel build jobs ^(default: %NUMBER_OF_PROCESSORS%^)
 echo   --clean               Remove previous native build directory before building
+echo   --dry-run             Print the resolved source/backend build without changing files
 echo   --help                Show this help message
 exit /b 0
 
 :done_args
 
-set "PS_ARGS=-Configuration Release -Jobs %JOBS% %CPU_FLAG% %CUDA_FLAG% %VULKAN_FLAG% %METAL_FLAG% %ALL_FLAG% %BUILD_CLI_FLAG% %SELECT_BACKEND_FLAG% %GGML_RELEASE_TAG_FLAG% %SKIP_NATIVE_FLAG% %CLEAN_FLAG%"
+set "PS_ARGS=-Configuration Release -Jobs %JOBS% %CPU_FLAG% %CUDA_FLAG% %VULKAN_FLAG% %METAL_FLAG% %ALL_FLAG% %BUILD_CLI_FLAG% %SELECT_BACKEND_FLAG% %SOURCE_RELEASE_TAG_FLAG% %SKIP_NATIVE_FLAG% %CLEAN_FLAG% %DRY_RUN_FLAG%"
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SETUP_SCRIPT%" %PS_ARGS%
 set "EXIT_CODE=%ERRORLEVEL%"
 endlocal & exit /b %EXIT_CODE%

@@ -7,6 +7,7 @@
 #include <atomic>
 #include <cstring>
 #include <functional>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -186,11 +187,15 @@ public:
 private:
 	void threadedFunction();
 	std::string computeContextFingerprint(const ofxGgmlStableDiffusionContextSettings& settings);
+	void beginNativeGeneration(sd_ctx_t* context);
+	void endNativeGeneration();
 	std::atomic<bool> isSdCtxLoaded{false};
 	bool isUpscalerCtxLoaded = false;
 	bool generationContextNeedsRefresh = false;
 	std::vector<sd_lora_t> loraBuffer;
 	std::atomic<bool> cancellationRequested{false};
+	std::mutex nativeGenerationMutex;
+	sd_ctx_t* activeNativeGenerationContext = nullptr;
 
 	// Context reuse optimization
 	std::string lastContextFingerprint;

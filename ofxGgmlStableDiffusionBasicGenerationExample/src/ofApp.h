@@ -25,6 +25,7 @@ private:
     void browseForMaskImage();
     void browseForControlImage();
     void browseForLora();
+    void browseForIdImages();
     void clearInputImage();
     void clearMaskImage();
     void clearControlImage();

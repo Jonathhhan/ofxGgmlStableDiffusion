@@ -1,4 +1,5 @@
 #include "video/ofxGgmlStableDiffusionVideoHelpers.h"
+#include "core/ofxGgmlStableDiffusionNativeAdapter.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -112,6 +113,78 @@ int main() {
 	ok &= expectNear(ofxGgmlStableDiffusionVideoDurationSeconds(0, 6), 0.0f, 0.0001f, "empty duration");
 	ok &= expectNear(ofxGgmlStableDiffusionVideoDurationSeconds(6, 6), 1.0f, 0.0001f, "whole-second duration");
 	ok &= expectNear(ofxGgmlStableDiffusionVideoDurationSeconds(5, 10), 0.5f, 0.0001f, "fractional duration");
+
+	// Native August API timing mapping: FPS must reach sd_vid_gen_params_t,
+	// not only the preview/export layer.
+	ofxGgmlStableDiffusionVideoRequest nativeTimingRequest;
+	nativeTimingRequest.frameCount = 33;
+	nativeTimingRequest.fps = 16;
+	sd_vid_gen_params_t nativeTimingParams{};
+	ofxGgmlStableDiffusionNativeAdapter::applyVideoTiming(nativeTimingRequest, nativeTimingParams);
+	ok &= expect(nativeTimingParams.video_frames == 33, "native video frame count is mapped");
+	ok &= expect(nativeTimingParams.fps == 16, "native video fps is mapped");
+
+	// Current stable-diffusion.cpp runtime placement and VRAM controls must
+	// reach sd_ctx_params_t without requiring a model-backed test.
+	ofxGgmlStableDiffusionContextSettings runtimeSettings;
+	runtimeSettings.maxVram = "cuda0=6,cuda1=8";
+	runtimeSettings.streamLayers = true;
+	runtimeSettings.eagerLoad = true;
+	runtimeSettings.backend = "diffusion=cuda0&cuda1,vae=cuda0";
+	runtimeSettings.paramsBackend = "cpu";
+	runtimeSettings.splitMode = "diffusion=row,te=layer";
+	runtimeSettings.autoFit = true;
+	sd_ctx_params_t nativeContextParams{};
+	ofxGgmlStableDiffusionNativeAdapter::applyContextRuntimeOptions(
+		runtimeSettings,
+		nativeContextParams);
+	ok &= expect(
+		nativeContextParams.max_vram != nullptr &&
+			std::string(nativeContextParams.max_vram) == runtimeSettings.maxVram,
+		"native max VRAM specification is mapped");
+	ok &= expect(nativeContextParams.stream_layers, "native layer streaming is mapped");
+	ok &= expect(nativeContextParams.eager_load, "native eager loading is mapped");
+	ok &= expect(
+		nativeContextParams.backend != nullptr &&
+			std::string(nativeContextParams.backend) == runtimeSettings.backend,
+		"native backend assignment is mapped");
+	ok &= expect(
+		nativeContextParams.params_backend != nullptr &&
+			std::string(nativeContextParams.params_backend) == runtimeSettings.paramsBackend,
+		"native params backend assignment is mapped");
+	ok &= expect(
+		nativeContextParams.split_mode != nullptr &&
+			std::string(nativeContextParams.split_mode) == runtimeSettings.splitMode,
+		"native multi-device split mode is mapped");
+	ok &= expect(nativeContextParams.auto_fit, "native device auto-fit is mapped");
+
+	ofxGgmlStableDiffusionContextSettings defaultRuntimeSettings;
+	sd_ctx_params_t defaultNativeContextParams{};
+	ofxGgmlStableDiffusionNativeAdapter::applyContextRuntimeOptions(
+		defaultRuntimeSettings,
+		defaultNativeContextParams);
+	ok &= expect(defaultNativeContextParams.max_vram == nullptr, "default max VRAM remains disabled");
+	ok &= expect(defaultNativeContextParams.split_mode == nullptr, "default split mode remains native default");
+	ok &= expect(!defaultNativeContextParams.stream_layers, "default layer streaming remains disabled");
+	ok &= expect(!defaultNativeContextParams.eager_load, "default eager loading remains disabled");
+	ok &= expect(!defaultNativeContextParams.auto_fit, "default auto-fit remains disabled");
+
+	ofxGgmlStableDiffusionContextSettings changedRuntimeSettings = runtimeSettings;
+	ok &= expect(changedRuntimeSettings == runtimeSettings, "runtime settings copy compares equal");
+	changedRuntimeSettings.maxVram = "4";
+	ok &= expect(changedRuntimeSettings != runtimeSettings, "max VRAM participates in context equality");
+	changedRuntimeSettings = runtimeSettings;
+	changedRuntimeSettings.streamLayers = false;
+	ok &= expect(changedRuntimeSettings != runtimeSettings, "layer streaming participates in context equality");
+	changedRuntimeSettings = runtimeSettings;
+	changedRuntimeSettings.eagerLoad = false;
+	ok &= expect(changedRuntimeSettings != runtimeSettings, "eager loading participates in context equality");
+	changedRuntimeSettings = runtimeSettings;
+	changedRuntimeSettings.splitMode = "layer";
+	ok &= expect(changedRuntimeSettings != runtimeSettings, "split mode participates in context equality");
+	changedRuntimeSettings = runtimeSettings;
+	changedRuntimeSettings.autoFit = false;
+	ok &= expect(changedRuntimeSettings != runtimeSettings, "auto-fit participates in context equality");
 
 	// Test duration edge cases
 	ok &= expectNear(ofxGgmlStableDiffusionVideoDurationSeconds(0, 0), 0.0f, 0.0001f, "zero frames zero fps");

@@ -125,6 +125,11 @@ ofxGgmlStableDiffusionContextSettings context;
 context.modelPath = "data/models/sd/sd_turbo.safetensors";
 context.nThreads = 8;
 context.weightType = SD_TYPE_COUNT;
+// Optional: let the current native runtime fit the model to available GPUs.
+// A negative maxVram value keeps that many GiB free per selected device.
+context.maxVram = "-1";
+context.autoFit = true;
+context.streamLayers = true;
 sd.configureContext(context);
 
 ofxGgmlStableDiffusionImageRequest request;
@@ -429,13 +434,13 @@ The repo now includes a vendored upstream `stable-diffusion.cpp` source snapshot
 under `libs/stable-diffusion/source`, pinned to:
 
 - upstream repo: `https://github.com/leejet/stable-diffusion.cpp`
-- upstream release tag: `master-666-7948df8`
-- upstream commit: `7948df8`
-- vendored on: `2026-06-01`
+- upstream release tag: `master-813-bfbef5b`
+- upstream commit: `bfbef5b7e64e89a0205894853de25d19a7ba54b9`
+- vendored on: `2026-08-10`
 
 The optional Windows prebuilt-runtime flow is currently pinned to the upstream
-GitHub release tag `master-666-7948df8`, which was the latest upstream release
-published on `2026-06-01`. Override it with `--source-release-tag` if you want a
+GitHub release tag `master-813-bfbef5b`, which was the latest upstream release
+published on `2026-08-05` (verified 2026-08-11). Override it with `--source-release-tag` if you want a
 different upstream runtime. Source: [stable-diffusion.cpp releases](https://github.com/leejet/stable-diffusion.cpp/releases)
 
 The addon now includes the upstream header directly through
@@ -501,6 +506,8 @@ video, control frames, creative loops, LoRA stacks, and embeddings.
 - **Solution**: Reduce batch count (try `batchCount = 1`)
 - **Solution**: Reduce image dimensions (try 512x512 instead of higher)
 - **Solution**: Enable VAE tiling with `vaeTiling = true`
+- **Solution**: Set `maxVram` (for example `"-1"` to retain roughly 1 GiB of free VRAM) and enable `autoFit`; use `streamLayers` when graph-split execution is needed
+- **Solution**: For multiple CUDA devices, set `backend` to an assignment such as `"diffusion=cuda0&cuda1"` and choose `splitMode = "layer"` or `"row"`
 - **Solution**: Use quantized models (Q4_0, Q5_0, etc.) for lower memory usage
 
 ### Slow Generation

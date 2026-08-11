@@ -204,17 +204,14 @@ Available selector values:
 
 ## Windows Source Snapshot Flow
 
-On Windows, the addon setup entrypoints now always fetch the source snapshot
-for the latest upstream `stable-diffusion.cpp` release tag, then refresh
-`libs/stable-diffusion/source/ggml` from the latest upstream `ggml` release,
-replace `libs/stable-diffusion/source`, and compile locally.
+On Windows, the addon setup entrypoints fetch the pinned upstream
+`stable-diffusion.cpp` release snapshot, replace `libs/stable-diffusion/source`,
+and compile it against the central ggml provider from `ofxGgmlCore`.
 
 Available setup flags:
 
 - `--source-release-tag TAG`
   Override the upstream release tag used for the vendored source snapshot
-- `--ggml-release-tag TAG`
-  Override the upstream `ggml` release tag used for the vendored `ggml` subtree
 
 Example:
 
@@ -225,20 +222,21 @@ scripts\setup_windows.bat --cuda
 Pin a specific source snapshot:
 
 ```bat
-scripts\setup_windows.bat --cuda --source-release-tag master-666-7948df8
+scripts\setup_windows.bat --cuda --source-release-tag master-813-bfbef5b
 ```
 
-Pin both upstream trees explicitly:
+The compatibility fallback can pin both upstream trees explicitly, but it is
+kept out of the default setup surface because it does not use Core's ggml:
 
 ```bat
-scripts\setup_windows.bat --cuda --source-release-tag master-666-7948df8 --ggml-release-tag v0.9.11
+scripts\build-stable-diffusion.bat --cuda --use-bundled-ggml --source-release-tag master-813-bfbef5b --ggml-release-tag v0.19.0
 ```
 
 The legacy-named helper below now does the same source-refresh job instead of
 staging prebuilt runtime binaries:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\download-stable-diffusion-release.ps1 -SourceReleaseTag master-666-7948df8
+powershell -ExecutionPolicy Bypass -File .\scripts\download-stable-diffusion-release.ps1 -SourceReleaseTag master-813-bfbef5b
 ```
 
 ## Current Pin
@@ -246,8 +244,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\download-stable-diffusion-rel
 The vendored tree includes the required submodules so the native rebuild scripts
 can run end-to-end.
 
-- Upstream release tag: `master-666-7948df8` (published 2026-06-01)
-- Vendored on: `2026-06-01`
+- Upstream release tag: `master-813-bfbef5b` (published 2026-08-05)
+- Upstream commit: `bfbef5b7e64e89a0205894853de25d19a7ba54b9`
+- Vendored on: `2026-08-10`
 - Default rebuilds use this release tag unless you override it via
   `--source-release-tag` / `-SourceReleaseTag`.
 

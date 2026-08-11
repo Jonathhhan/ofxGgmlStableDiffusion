@@ -13,6 +13,17 @@ function Assert-Contains {
 	}
 }
 
+function Assert-NotContains {
+	param(
+		[string]$Text,
+		[string]$Needle,
+		[string]$Label
+	)
+	if ($Text.Contains($Needle)) {
+		throw "$Label unexpectedly contained text: $Needle`n$Text"
+	}
+}
+
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $addonRoot = (Resolve-Path (Join-Path $scriptRoot "..")).Path
 $addonsRoot = Split-Path -Parent $addonRoot
@@ -58,5 +69,33 @@ Assert-Contains $systemOutput $coreRoot "system GGML dry-run"
 $bundledOutput = & $buildScript -DryRun -SkipSourceRefresh -CpuOnly -UseBundledGgml 2>&1 6>&1 | Out-String
 Assert-Contains $bundledOutput "Backend mode: cpu-only" "bundled GGML fallback dry-run"
 Assert-Contains $bundledOutput "System GGML: OFF (using bundled)" "bundled GGML fallback dry-run"
+
+$coreRefreshOutput = & $buildScript `
+	-DryRun `
+	-Cuda `
+	-SourceReleaseTag master-813-bfbef5b 2>&1 6>&1 | Out-String
+Assert-Contains $coreRefreshOutput "Release tag: master-813-bfbef5b" "Core source refresh dry-run"
+Assert-NotContains $coreRefreshOutput "Refreshing ggml source" "Core source refresh dry-run"
+Assert-NotContains $coreRefreshOutput "GGUF dimension compatibility patch" "Core source refresh dry-run"
+
+$bundledRefreshOutput = & $buildScript `
+	-DryRun `
+	-Cuda `
+	-UseBundledGgml `
+	-SourceReleaseTag master-813-bfbef5b `
+	-GgmlReleaseTag v0.19.0 2>&1 6>&1 | Out-String
+Assert-Contains $bundledRefreshOutput "Refreshing ggml source" "bundled ggml pin dry-run"
+Assert-Contains $bundledRefreshOutput "Release tag: v0.19.0" "bundled ggml pin dry-run"
+Assert-Contains $bundledRefreshOutput "GGUF dimension compatibility patch" "bundled ggml pin dry-run"
+
+$systemPinRejected = $false
+try {
+	& $buildScript -DryRun -Cuda -UseSystemGgml -GgmlReleaseTag v0.19.0 2>&1 6>&1 | Out-Null
+} catch {
+	$systemPinRejected = $_.Exception.Message.Contains("only applies to -UseBundledGgml")
+}
+if (-not $systemPinRejected) {
+	throw "System ggml lane accepted a redundant -GgmlReleaseTag override"
+}
 
 Write-Host "==> Stable Diffusion build dry-run coverage passed"

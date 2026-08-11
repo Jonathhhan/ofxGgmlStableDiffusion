@@ -101,11 +101,23 @@ void ofApp::draw() {
 		if (ImGui::InputText("Model", modelPathInput.data(), modelPathInput.size())) {
 			syncRequestFromUi();
 		}
+		ImGui::SameLine();
+		if (ImGui::Button("Browse...##model")) {
+			browsePath("Select Stable Diffusion model", false, modelPathInput);
+		}
 		if (ImGui::InputText("LoRA dir", loraDirInput.data(), loraDirInput.size())) {
 			syncRequestFromUi();
 		}
+		ImGui::SameLine();
+		if (ImGui::Button("Browse...##lora-dir")) {
+			browsePath("Select LoRA folder", true, loraDirInput);
+		}
 		if (ImGui::InputText("Embeddings dir", embedDirInput.data(), embedDirInput.size())) {
 			syncRequestFromUi();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Browse...##embeddings-dir")) {
+			browsePath("Select embeddings folder", true, embedDirInput);
 		}
 
 		if (ImGui::Button("Configure Context")) {
@@ -235,6 +247,20 @@ void ofApp::configureContext() {
 			"Place a model in bin/data/models/ before running.";
 		statusMessage = capabilities.contextConfigured ? "Context configured" : "Model not loaded";
 	}
+}
+
+//--------------------------------------------------------------
+void ofApp::browsePath(
+	const std::string& title,
+	bool selectFolder,
+	std::array<char, 512>& input) {
+	auto selected = ofSystemLoadDialog(title, selectFolder, input.data());
+	if (!selected.bSuccess) {
+		return;
+	}
+	ofxGgmlStableDiffusionExampleCopyToInput(selected.getPath(), input);
+	syncRequestFromUi();
+	statusMessage = selectFolder ? "Selected folder" : "Selected model file";
 }
 
 //--------------------------------------------------------------

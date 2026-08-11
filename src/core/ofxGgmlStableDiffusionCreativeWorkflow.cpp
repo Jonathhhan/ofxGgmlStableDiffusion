@@ -62,7 +62,14 @@ ofJson serializeContextSettings(const ofxGgmlStableDiffusionContextSettings& set
 		{"offloadParamsToCpu", settings.offloadParamsToCpu},
 		{"flashAttn", settings.flashAttn},
 		{"diffusionFlashAttn", settings.diffusionFlashAttn},
-		{"enableMmap", settings.enableMmap}
+		{"enableMmap", settings.enableMmap},
+		{"maxVram", settings.maxVram},
+		{"streamLayers", settings.streamLayers},
+		{"eagerLoad", settings.eagerLoad},
+		{"backend", settings.backend},
+		{"paramsBackend", settings.paramsBackend},
+		{"splitMode", settings.splitMode},
+		{"autoFit", settings.autoFit}
 	};
 }
 
@@ -168,6 +175,13 @@ ofxGgmlStableDiffusionContextSettings parseContextSettings(const ofJson& json) {
 	settings.flashAttn = json.value("flashAttn", false);
 	settings.diffusionFlashAttn = json.value("diffusionFlashAttn", false);
 	settings.enableMmap = json.value("enableMmap", true);
+	settings.maxVram = json.value("maxVram", "");
+	settings.streamLayers = json.value("streamLayers", false);
+	settings.eagerLoad = json.value("eagerLoad", false);
+	settings.backend = json.value("backend", "");
+	settings.paramsBackend = json.value("paramsBackend", "");
+	settings.splitMode = json.value("splitMode", "");
+	settings.autoFit = json.value("autoFit", false);
 	return settings;
 }
 

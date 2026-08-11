@@ -6,7 +6,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$DefaultSourceReleaseTag = "master-666-7948df8"
+$DefaultSourceReleaseTag = "master-813-bfbef5b"
 
 function Write-Step {
     param([string]$Message)

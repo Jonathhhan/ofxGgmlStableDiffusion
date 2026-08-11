@@ -9,7 +9,7 @@ param(
     [switch]$BuildCli,
     [ValidateSet('cpu-only', 'cuda', 'vulkan', 'metal')]
     [string]$SelectBackend = "",
-    [string]$GgmlReleaseTag = "",
+    [string]$SourceReleaseTag = "",
     [switch]$Clean,
     [switch]$SkipNative,
     [switch]$DryRun
@@ -58,8 +58,8 @@ if (-not $SkipNative) {
     if ($BuildCli) {
         $nativeArgs.BuildCli = $true
     }
-    if (-not [string]::IsNullOrWhiteSpace($GgmlReleaseTag)) {
-        $nativeArgs.GgmlReleaseTag = $GgmlReleaseTag
+    if (-not [string]::IsNullOrWhiteSpace($SourceReleaseTag)) {
+        $nativeArgs.SourceReleaseTag = $SourceReleaseTag
     }
     if ($Clean) {
         $nativeArgs.Clean = $true

@@ -2168,8 +2168,13 @@ ofxGgmlStableDiffusionContextSettings ofxGgmlStableDiffusion::captureContextSett
 	settings.flashAttn = flashAttn;
 	settings.diffusionFlashAttn = diffusionFlashAttn;
 	settings.enableMmap = enableMmap;
+	settings.maxVram = maxVram;
+	settings.streamLayers = streamLayers;
+	settings.eagerLoad = eagerLoad;
 	settings.backend = backend;
 	settings.paramsBackend = paramsBackend;
+	settings.splitMode = splitMode;
+	settings.autoFit = autoFit;
 	return settings;
 }
 
@@ -2209,8 +2214,13 @@ void ofxGgmlStableDiffusion::applyContextSettings(const ofxGgmlStableDiffusionCo
 	flashAttn = resolvedSettings.flashAttn;
 	diffusionFlashAttn = resolvedSettings.diffusionFlashAttn;
 	enableMmap = resolvedSettings.enableMmap;
+	maxVram = resolvedSettings.maxVram;
+	streamLayers = resolvedSettings.streamLayers;
+	eagerLoad = resolvedSettings.eagerLoad;
 	backend = resolvedSettings.backend;
 	paramsBackend = resolvedSettings.paramsBackend;
+	splitMode = resolvedSettings.splitMode;
+	autoFit = resolvedSettings.autoFit;
 }
 
 bool ofxGgmlStableDiffusion::applyImageRequest(const ofxGgmlStableDiffusionImageRequest& request) {

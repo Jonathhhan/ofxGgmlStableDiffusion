@@ -155,6 +155,12 @@ void ofApp::draw() {
 			if (ImGui::InputText("Input image path", inputPathInput.data(), inputPathInput.size())) {
 				syncRequestFromUi();
 			}
+			if (ImGui::Button("Browse Input...")) {
+				if (browseImagePath("Select input image", inputPath, inputPathInput)) {
+					loadInputImage();
+				}
+			}
+			ImGui::SameLine();
 			if (ImGui::Button("Load Input")) {
 				loadInputImage();
 			}
@@ -168,6 +174,12 @@ void ofApp::draw() {
 			if (ImGui::InputText("Mask path", maskPathInput.data(), maskPathInput.size())) {
 				syncRequestFromUi();
 			}
+			if (ImGui::Button("Browse Mask...")) {
+				if (browseImagePath("Select mask image", maskPath, maskPathInput)) {
+					loadMaskImage();
+				}
+			}
+			ImGui::SameLine();
 			if (ImGui::Button("Load Mask")) {
 				loadMaskImage();
 			}
@@ -182,6 +194,12 @@ void ofApp::draw() {
 			if (ImGui::InputText("Control image path", controlPathInput.data(), controlPathInput.size())) {
 				syncRequestFromUi();
 			}
+			if (ImGui::Button("Browse Control...")) {
+				if (browseImagePath("Select control image", controlPath, controlPathInput)) {
+					loadControlImage();
+				}
+			}
+			ImGui::SameLine();
 			if (ImGui::Button("Load Control")) {
 				loadControlImage();
 			}
@@ -296,6 +314,20 @@ void ofApp::browseModelPath(std::string& path, std::array<char, 512>& input) {
 	path = result.getPath();
 	ofxGgmlStableDiffusionExampleCopyToInput(path, input);
 	statusMessage = "Selected model path";
+}
+
+//--------------------------------------------------------------
+bool ofApp::browseImagePath(
+	const std::string& title,
+	std::string& path,
+	std::array<char, 512>& input) {
+	ofFileDialogResult result = ofSystemLoadDialog(title, false, path);
+	if (!result.bSuccess) {
+		return false;
+	}
+	path = result.getPath();
+	ofxGgmlStableDiffusionExampleCopyToInput(path, input);
+	return true;
 }
 
 //--------------------------------------------------------------

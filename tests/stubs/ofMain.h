@@ -331,6 +331,13 @@ inline std::string ofToDataPath(const std::string& value, bool = false) {
 	return value;
 }
 
+inline std::string ofToLower(std::string value) {
+	std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
+		return static_cast<char>(std::tolower(c));
+	});
+	return value;
+}
+
 inline std::string ofGetEnv(const std::string& key) {
 #if defined(_MSC_VER)
 	char* value = nullptr;
@@ -536,6 +543,10 @@ inline bool ofSaveImage(
 	return output.good();
 }
 
+inline bool ofLoadImage(ofPixels&, const std::string&) {
+	return false;
+}
+
 inline bool ofSaveImage(
 	const ofPixels& pixels,
 	ofBuffer& buffer,
@@ -568,7 +579,10 @@ public:
 	std::string path;
 };
 
-inline ofFileDialogResult ofSystemLoadDialog(const std::string&) {
+inline ofFileDialogResult ofSystemLoadDialog(
+	const std::string&,
+	bool = false,
+	const std::string& = "") {
 	return {};
 }
 

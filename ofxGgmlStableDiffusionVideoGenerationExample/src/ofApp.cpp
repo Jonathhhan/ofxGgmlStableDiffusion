@@ -398,6 +398,13 @@ void ofApp::draw() {
 		if (ImGui::InputText("Image path", imagePathInput.data(), imagePathInput.size())) {
 			syncRequestFromUi();
 		}
+		if (ImGui::Button("Browse Image...")) {
+			if (browseImagePath("Select video start image", imagePath, imagePathInput)) {
+				useInputImage = true;
+				loadInputImage();
+			}
+		}
+		ImGui::SameLine();
 		if (ImGui::Button("Load Image")) {
 			loadInputImage();
 		}
@@ -409,6 +416,13 @@ void ofApp::draw() {
 		if (ImGui::InputText("End frame path", endFramePathInput.data(), endFramePathInput.size())) {
 			syncRequestFromUi();
 		}
+		if (ImGui::Button("Browse End Frame...")) {
+			if (browseImagePath("Select video end frame", endFramePath, endFramePathInput)) {
+				useEndFrame = true;
+				loadEndFrame();
+			}
+		}
+		ImGui::SameLine();
 		if (ImGui::Button("Load End Frame")) {
 			loadEndFrame();
 		}
@@ -717,6 +731,20 @@ void ofApp::browseModelPath(std::string& path, std::array<char, 512>& input, boo
 		saveModelPathSettings();
 	}
 	statusMessage = "Selected model path";
+}
+
+//--------------------------------------------------------------
+bool ofApp::browseImagePath(
+	const std::string& title,
+	std::string& path,
+	std::array<char, 512>& input) {
+	ofFileDialogResult result = ofSystemLoadDialog(title, false, path);
+	if (!result.bSuccess) {
+		return false;
+	}
+	path = result.getPath();
+	ofxGgmlStableDiffusionExampleCopyToInput(path, input);
+	return true;
 }
 
 //--------------------------------------------------------------

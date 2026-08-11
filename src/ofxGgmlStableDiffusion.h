@@ -511,8 +511,13 @@ public:
 	bool flashAttn = false;
 	bool diffusionFlashAttn = false;
 	bool enableMmap = true;
+	std::string maxVram;
+	bool streamLayers = false;
+	bool eagerLoad = false;
 	std::string backend;
 	std::string paramsBackend;
+	std::string splitMode;
+	bool autoFit = false;
 	float styleStrength = 20.0f;
 	int nThreads = -1;
 	int esrganMultiplier = 4;

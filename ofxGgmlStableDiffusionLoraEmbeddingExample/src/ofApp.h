@@ -20,6 +20,10 @@ public:
 
 private:
 	void syncRequestFromUi();
+	void browsePath(
+		const std::string& title,
+		bool selectFolder,
+		std::array<char, 512>& input);
 	void configureContext();
 	void scanLoras();
 	void reloadEmbeddings();

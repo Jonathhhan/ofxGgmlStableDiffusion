@@ -4,6 +4,11 @@
 
 ### Changed
 
+- Aligns every active source-update entrypoint and current-pin document with upstream `stable-diffusion.cpp` release `master-813-bfbef5b` (published 2026-08-05).
+- The canonical starter restores or discovers image models, accepts pasteable unbounded model/prompt strings, and selects a staged CUDA runtime automatically.
+- The default Windows setup no longer refreshes or exposes a second unused ggml tree; explicit ggml release pins are limited to the bundled compatibility lane.
+- Native video requests now forward `fps` to `sd_vid_gen_params_t` instead of applying FPS only to preview and export.
+- Cancellation now forwards to upstream `sd_cancel_generation()` for the active native image/video context instead of waiting for CUDA generation to return before honoring the wrapper flag.
 - Example READMEs clarify each example's lane and shared keyboard shortcuts.
 - BasicGeneration accepts legacy `.ckpt` model paths and uses LoRA-specific adapter extension checks.
 - ImageWorkflow exposes image-model and ControlNet model paths from the panel.
@@ -18,6 +23,7 @@
 
 ### Added
 
+- Context settings now expose upstream VRAM budgets, layer streaming, eager parameter loading, automatic device fitting, and multi-device split modes; workflow snapshots and the canonical starter preserve these settings.
 - Regression coverage for video export rejection paths and the local RIFF/AVI fallback writer.
 
 ## 1.0.2 - 2026-06-02
