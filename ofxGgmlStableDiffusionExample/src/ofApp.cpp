@@ -1,5 +1,6 @@
 #include "ofApp.h"
 
+#include "core/ofxGgmlStableDiffusionCapabilityHelpers.h"
 #include "imgui_stdlib.h"
 
 #include <algorithm>
@@ -24,6 +25,18 @@ bool isSupportedModelPath(const std::string& path) {
 	std::string extension = ofxGgmlStableDiffusionExampleLower(path.substr(dot + 1));
 	return extension == "safetensors" || extension == "ckpt" ||
 		extension == "gguf" || extension == "ggml";
+}
+
+std::string supportedModeLabel(const ofxGgmlStableDiffusionCapabilities& capabilities) {
+	std::vector<std::string> modes;
+	if (capabilities.textToImage) modes.emplace_back("text-to-image");
+	if (capabilities.imageToImage) modes.emplace_back("image-to-image");
+	if (capabilities.inpainting) modes.emplace_back("inpainting");
+	if (capabilities.imageToVideo) modes.emplace_back("video");
+	if (modes.empty()) return "none detected";
+	std::string label = modes.front();
+	for (std::size_t i = 1; i < modes.size(); ++i) label += ", " + modes[i];
+	return label;
 }
 
 }
@@ -116,9 +129,18 @@ void ofApp::draw() {
 	ImGui::SetNextWindowSize(ImVec2(560.0f, 620.0f), ImGuiCond_Once);
 	if (ImGui::Begin("Stable Diffusion Starter")) {
 		const bool busy = stableDiffusion.isBusy();
+		const auto capabilities = stableDiffusion.getCapabilities();
 		ImGui::TextWrapped("%s", statusMessage.c_str());
 		ImGui::TextWrapped("%s", modelSummary.c_str());
 		ImGui::TextWrapped("%s", ofxGgmlStableDiffusionExampleRuntimeLabel(stableDiffusion).c_str());
+		if (capabilities.contextConfigured) {
+			ImGui::Text("Model family: %s", ofxGgmlStableDiffusionModelFamilyLabel(capabilities.modelFamily));
+			const std::string modes = supportedModeLabel(capabilities);
+			ImGui::TextWrapped("Supported modes: %s", modes.c_str());
+			if (!capabilities.textToImage && capabilities.imageToVideo) {
+				ImGui::TextWrapped("This is a video model. Use ofxGgmlStableDiffusionVideoGenerationExample.");
+			}
+		}
 		if (busy) {
 			ImGui::ProgressBar(progress.load(), ImVec2(-1.0f, 0.0f));
 		}
@@ -159,7 +181,7 @@ void ofApp::draw() {
 		ImGui::SliderFloat("CFG", &cfgScale, 1.0f, 15.0f);
 		ImGui::InputInt("Seed", &seed);
 
-		const bool canGenerate = stableDiffusion.hasLoadedContext() && !busy;
+		const bool canGenerate = stableDiffusion.hasLoadedContext() && capabilities.textToImage && !busy;
 		if (!canGenerate) {
 			ImGui::BeginDisabled();
 		}
@@ -351,6 +373,13 @@ void ofApp::startGeneration() {
 	}
 	if (!stableDiffusion.hasLoadedContext()) {
 		statusMessage = "Load a model before generating.";
+		return;
+	}
+	const auto capabilities = stableDiffusion.getCapabilities();
+	if (!capabilities.textToImage) {
+		statusMessage = capabilities.imageToVideo ?
+			"This model supports video generation; open the VideoGeneration example." :
+			"The loaded model does not support text-to-image generation.";
 		return;
 	}
 

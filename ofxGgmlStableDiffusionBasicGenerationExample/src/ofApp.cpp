@@ -237,7 +237,7 @@ void ofApp::update() {
 		}
 		if (smokeMode && resultImage.isAllocated()) {
 			const bool saved = resultImage.save(smokeOutputPath);
-			ofLogNotice("ofxGgmlStableDiffusionSmoke")
+			ofLogWarning("ofxGgmlStableDiffusionSmoke")
 				<< "OF_WRAPPER_CUDA_SMOKE=" << (saved ? "PASS" : "FAIL")
 				<< " output=" << smokeOutputPath;
 			ofExit(saved ? 0 : 2);

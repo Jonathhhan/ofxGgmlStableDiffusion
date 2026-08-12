@@ -116,6 +116,15 @@ Assert-ContentContains $agentsPath "ofxStableDiffusion" "agent lineage guidance"
 Assert-ContentContains $stagingPath "Exclude .?ofxGgmlDiffusion" "staging exclusion guidance"
 Assert-ContentContains $workflowGuidePath "ofxGgmlDiffusion.? is intentionally paused" "workflow guide diffusion exclusion"
 Assert-ContentContains $metadataPath '"requires"\s*:\s*\[\s*"ofxGgmlCore"\s*\]' "Core metadata dependency contract"
+$metadata = Get-Content -LiteralPath $metadataPath -Raw | ConvertFrom-Json
+if ([string]$metadata.inferenceSmokeReport -ne [string]$metadata.runtimeSmokeReport -or
+    [string]$metadata.inferenceSmokeReport -ne ".stable-diffusion-runtime-smoke.json") {
+    throw "Stable Diffusion runtime and inference evidence must share .stable-diffusion-runtime-smoke.json."
+}
+Assert-ContentContains $basicCppPath 'ofLogWarning\("ofxGgmlStableDiffusionSmoke"\)' "visible wrapper smoke result"
+Assert-ContentContains $starterCppPath 'Supported modes:' "capability-aware starter summary"
+Assert-ContentContains $starterCppPath 'capabilities\.textToImage' "capability-aware image generation gate"
+Assert-ContentContains $starterCppPath 'ofxGgmlStableDiffusionVideoGenerationExample' "video-model workflow routing"
 Assert-ContentContains $addonConfigPath "ADDON_NAME\s*=\s*ofxGgmlStableDiffusion" "addon name"
 Assert-ContentContains $addonConfigPath "ADDON_DEPENDENCIES\s*\+=\s*ofxGgmlCore" "Core addon dependency"
 Assert-ContentContains $addonsMakePath "(?m)^ofxGgmlStableDiffusion\r?$" "example addon dependency"
