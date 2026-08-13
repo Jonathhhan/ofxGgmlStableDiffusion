@@ -8,7 +8,11 @@ ControlNet guide image rather than the full parameter surface.
 
 - Text-to-image, image-to-image, and inpainting modes
 - Editable model and optional ControlNet model paths
+- Pasteable, unbounded model, image, mask, and prompt fields
+- Explicit Auto/CPU/CUDA/Vulkan/Metal backend selection
 - Input image and mask loading
+- Optional output-size matching from the input image with 64-pixel alignment
+- Live workflow readiness messages that identify missing input, mask, or ControlNet data
 - Optional ControlNet guide image and strength
 - Prompt, negative prompt, CFG, strength, steps, seed, and batch controls
 - Cancel and save result actions
@@ -20,6 +24,8 @@ ControlNet guide image rather than the full parameter surface.
 3. Update or browse model paths from the panel if needed.
 4. Run the example.
 5. Click **Configure Context** after changing model paths.
-6. Choose the workflow mode and click **Generate**.
+6. Choose the workflow mode. For image-to-image load an input image; for
+   inpainting also load a mask where white is repainted and black is preserved.
+7. Generate becomes available when the selected workflow is complete.
 
 SPACE starts generation, and Esc or C requests cancellation.

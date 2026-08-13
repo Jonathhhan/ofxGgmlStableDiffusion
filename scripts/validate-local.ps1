@@ -71,6 +71,8 @@ $requiredPaths = @(
     "scripts/test-project-generator-examples.ps1",
     "scripts/run-stable-diffusion-runtime-smoke.ps1",
     "scripts/run-stable-diffusion-runtime-smoke.bat",
+    "scripts/run-image-generation-smoke.ps1",
+    "scripts/run-image-generation-smoke.bat",
     "scripts/test-runtime-smoke-model-discovery.ps1",
     "scripts/run-wan-context-smoke.ps1",
     "scripts/run-wan-context-smoke.bat",
@@ -99,11 +101,13 @@ $creativeLoopAddonsMakePath = Join-Path $addonRoot "ofxGgmlStableDiffusionCreati
 $loraEmbeddingAddonsMakePath = Join-Path $addonRoot "ofxGgmlStableDiffusionLoraEmbeddingExample/addons.make"
 $starterCppPath = Join-Path $addonRoot "ofxGgmlStableDiffusionExample/src/ofApp.cpp"
 $starterHeaderPath = Join-Path $addonRoot "ofxGgmlStableDiffusionExample/src/ofApp.h"
+$starterReadmePath = Join-Path $addonRoot "ofxGgmlStableDiffusionExample/README.md"
 $basicCppPath = Join-Path $addonRoot "ofxGgmlStableDiffusionBasicGenerationExample/src/ofApp.cpp"
 $imageWorkflowCppPath = Join-Path $addonRoot "ofxGgmlStableDiffusionImageWorkflowExample/src/ofApp.cpp"
 $videoCppPath = Join-Path $addonRoot "ofxGgmlStableDiffusionVideoGenerationExample/src/ofApp.cpp"
 $videoControlFramesCppPath = Join-Path $addonRoot "ofxGgmlStableDiffusionVideoControlFramesExample/src/ofApp.cpp"
 $nativeBuildPath = Join-Path $addonRoot "scripts/build-stable-diffusion.ps1"
+$nativeBuildBatchPath = Join-Path $addonRoot "scripts/build-stable-diffusion.bat"
 $nativeDownloadPath = Join-Path $addonRoot "scripts/download-stable-diffusion-release.ps1"
 $setupAddonPath = Join-Path $addonRoot "scripts/setup_addon.ps1"
 $setupWindowsPath = Join-Path $addonRoot "scripts/setup_windows.bat"
@@ -143,13 +147,22 @@ if (Test-Path -LiteralPath (Join-Path $addonRoot "examples") -PathType Container
 
 Write-Step "Checking canonical starter and native source pin"
 Assert-ContentContains $starterCppPath 'imgui_stdlib\.h' "dynamic ImGui string support"
-Assert-ContentContains $starterCppPath 'InputText\("Model",\s*&modelPath\)' "pasteable model path"
+Assert-ContentContains $starterCppPath 'InputText\("Model path",\s*&modelPath\)' "pasteable model path"
 Assert-ContentContains $starterCppPath 'OFXGGML_STABLE_DIFFUSION_MODEL' "configured model discovery"
 Assert-ContentContains $starterCppPath 'last_model\.txt' "successful model path persistence"
 Assert-ContentContains $starterCppPath 'settings\.backend\s*=\s*"cuda"' "automatic CUDA context selection"
+Assert-ContentContains $starterCppPath 'OFXGGML_STABLE_DIFFUSION_IMAGE_SMOKE' "model-backed starter image smoke mode"
+Assert-ContentContains $starterCppPath 'ofSaveImage' "starter image smoke output"
+Assert-ContentContains $starterCppPath 'Local models' "recursive starter model chooser"
+Assert-ContentContains $starterCppPath 'VRAM policy' "explicit starter VRAM policy display"
+Assert-ContentContains $starterReadmePath 'run-image-generation-smoke\.ps1' "starter image smoke documentation"
 Assert-ContentNotContains $starterHeaderPath 'array<char' "fixed-size starter text buffers"
 Assert-ContentContains $basicCppPath 'Select PhotoMaker ID images folder' "PhotoMaker ID images folder browser"
 Assert-ContentContains $imageWorkflowCppPath 'Browse Input\.\.\.' "image workflow input image browser"
+Assert-ContentContains $imageWorkflowCppPath 'imgui_stdlib\.h' "pasteable image workflow strings"
+Assert-ContentContains $imageWorkflowCppPath 'Match input size' "image workflow input dimension matching"
+Assert-ContentContains $imageWorkflowCppPath 'workflowReady' "mode-aware image workflow readiness"
+Assert-ContentNotContains $imageWorkflowCppPath 'array<char' "fixed-size image workflow buffers"
 Assert-ContentContains $imageWorkflowCppPath 'Browse Mask\.\.\.' "image workflow mask browser"
 Assert-ContentContains $imageWorkflowCppPath 'Browse Control\.\.\.' "image workflow control image browser"
 Assert-ContentContains $videoCppPath 'Select video start image' "video start image browser"
@@ -160,6 +173,13 @@ foreach ($pinPath in @($nativeBuildPath, $nativeDownloadPath, $setupWindowsPath,
 }
 Assert-ContentContains $setupAddonPath '\[string\]\$SourceReleaseTag' "PowerShell source release override"
 Assert-ContentContains $setupWindowsPath '--source-release-tag' "Windows source release override"
+Assert-ContentContains $nativeBuildPath '\[string\]\$CudaArchitectures' "PowerShell CUDA architecture override"
+Assert-ContentContains $nativeBuildBatchPath '--cuda-architectures' "Windows build CUDA architecture override"
+Assert-ContentContains $nativeBuildBatchPath '--build-cli' "Windows build CLI option"
+Assert-ContentContains $nativeBuildBatchPath '--skip-source-refresh' "Windows source reuse option"
+Assert-ContentContains $setupWindowsPath '--cuda-architectures' "Windows CUDA architecture override"
+Assert-ContentContains $nativeGuidePath 'master-820-de298c2' "latest verified bundled upstream runtime"
+Assert-ContentContains $nativeGuidePath 'UseBundledGgml' "latest upstream bundled ggml compatibility lane"
 Assert-ContentNotContains $setupAddonPath 'GgmlReleaseTag' "duplicate ggml setup option"
 Assert-ContentNotContains $setupWindowsPath 'ggml-release-tag' "duplicate ggml Windows setup option"
 Assert-ContentContains $nativeBuildPath 'GgmlReleaseTag only applies to -UseBundledGgml' "bundled ggml pin guard"
@@ -184,6 +204,8 @@ if (!$?) {
 
 Write-Step "Checking Stable Diffusion runtime smoke dry-run"
 & (Join-Path $scriptRoot "run-stable-diffusion-runtime-smoke.ps1") -DryRun -Json -SummaryOnly
+Write-Step "Checking openFrameworks image generation smoke dry-run"
+& (Join-Path $scriptRoot "run-image-generation-smoke.ps1") -DryRun -Json
 if (!$?) {
     throw "Stable Diffusion runtime smoke dry-run failed"
 }

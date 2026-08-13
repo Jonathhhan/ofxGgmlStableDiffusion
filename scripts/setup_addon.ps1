@@ -3,6 +3,7 @@ param(
     [int]$Jobs = 0,
     [Alias('Cpu')][switch]$CpuOnly,
     [Alias('Gpu')][switch]$Cuda,
+    [string]$CudaArchitectures = $(if ($env:OFXGGML_CUDA_ARCHITECTURES) { $env:OFXGGML_CUDA_ARCHITECTURES } else { "" }),
     [switch]$Vulkan,
     [switch]$Metal,
     [switch]$All,
@@ -45,6 +46,9 @@ if (-not $SkipNative) {
     }
     if ($Cuda) {
         $nativeArgs.Cuda = $true
+    }
+    if (-not [string]::IsNullOrWhiteSpace($CudaArchitectures)) {
+        $nativeArgs.CudaArchitectures = $CudaArchitectures
     }
     if ($Vulkan) {
         $nativeArgs.Vulkan = $true

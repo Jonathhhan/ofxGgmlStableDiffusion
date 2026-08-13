@@ -6,9 +6,13 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <initializer_list>
+#include <sstream>
 #include <string>
+#include <vector>
 #ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -42,6 +46,60 @@ inline std::string ofxGgmlStableDiffusionExampleResolveReadablePath(
 		return dataPath;
 	}
 	return path;
+}
+
+inline bool ofxGgmlStableDiffusionExampleIsImageModelPath(
+	const std::string& path) {
+	std::string extension = std::filesystem::path(path).extension().string();
+	std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) {
+		return static_cast<char>(std::tolower(c));
+	});
+	return extension == ".safetensors" || extension == ".ckpt" ||
+		extension == ".gguf" || extension == ".ggml";
+}
+
+inline std::vector<std::string> ofxGgmlStableDiffusionExampleDiscoverModels(
+	const std::string& directory) {
+	std::vector<std::string> models;
+	std::error_code error;
+	const std::filesystem::path root(directory);
+	if (!std::filesystem::is_directory(root, error)) {
+		return models;
+	}
+	std::filesystem::recursive_directory_iterator iterator(
+		root,
+		std::filesystem::directory_options::skip_permission_denied,
+		error);
+	const std::filesystem::recursive_directory_iterator end;
+	while (!error && iterator != end) {
+		if (iterator->is_regular_file(error)) {
+			const std::string path = iterator->path().string();
+			if (ofxGgmlStableDiffusionExampleIsImageModelPath(path)) {
+				models.push_back(path);
+			}
+		}
+		iterator.increment(error);
+	}
+	std::sort(models.begin(), models.end());
+	models.erase(std::unique(models.begin(), models.end()), models.end());
+	return models;
+}
+
+inline std::string ofxGgmlStableDiffusionExampleFileSizeLabel(
+	const std::string& path) {
+	std::error_code error;
+	const auto bytes = std::filesystem::file_size(path, error);
+	if (error) {
+		return "size unknown";
+	}
+	const double gib = static_cast<double>(bytes) / (1024.0 * 1024.0 * 1024.0);
+	std::ostringstream label;
+	label << std::fixed << std::setprecision(gib >= 10.0 ? 1 : 2) << gib << " GiB";
+	return label.str();
+}
+
+inline int ofxGgmlStableDiffusionExampleAlignedDimension(int value) {
+	return std::clamp(((value + 32) / 64) * 64, 64, 2048);
 }
 
 inline std::string ofxGgmlStableDiffusionExampleEnvOrReadablePath(

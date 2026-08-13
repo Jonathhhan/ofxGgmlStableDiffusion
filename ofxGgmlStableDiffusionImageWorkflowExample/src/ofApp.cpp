@@ -1,5 +1,7 @@
 #include "ofApp.h"
 
+#include "imgui_stdlib.h"
+
 #include <algorithm>
 
 namespace {
@@ -8,6 +10,7 @@ const char* imageModeLabels[] = {
 	"ImageToImage",
 	"Inpainting"
 };
+const char* backendLabels[] = {"Auto", "CPU", "CUDA", "Vulkan", "Metal"};
 }
 
 //--------------------------------------------------------------
@@ -18,12 +21,12 @@ void ofApp::setup() {
 
 	prompt = "A cinematic portrait, soft light, detailed";
 	negativePrompt = "blurry, low quality, distorted";
-	modelPath = ofToDataPath("models/sd_v1.5.safetensors");
-	controlNetPath = ofToDataPath("models/controlnet/control.safetensors");
-	ofxGgmlStableDiffusionExampleCopyToInput(prompt, promptInput);
-	ofxGgmlStableDiffusionExampleCopyToInput(negativePrompt, negativePromptInput);
-	ofxGgmlStableDiffusionExampleCopyToInput(modelPath, modelPathInput);
-	ofxGgmlStableDiffusionExampleCopyToInput(controlNetPath, controlNetPathInput);
+	modelPath = ofxGgmlStableDiffusionExampleEnvOrReadablePath(
+		{"OFXGGML_STABLE_DIFFUSION_MODEL"},
+		{"models/sd_v1.5.safetensors"});
+	controlNetPath = ofxGgmlStableDiffusionExampleEnvOrReadablePath(
+		{"OFXGGML_STABLE_DIFFUSION_CONTROL_NET"},
+		{"models/controlnet/control.safetensors"});
 	statusMessage = "Ready";
 
 	auto window = ofGetCurrentWindow();
@@ -34,11 +37,16 @@ void ofApp::setup() {
 		return;
 	}
 
-	configureContext();
 	sd.setProgressCallback([this](int step, int steps, float time) {
 		const float value = steps > 0 ? static_cast<float>(step) / static_cast<float>(steps) : 0.0f;
 		progress.store(value);
 	});
+	if (ofFile::doesFileExist(modelPath)) {
+		configureContext();
+	} else {
+		modelSummary = "Choose a local image model to begin.";
+		statusMessage = "Browse or paste a model path";
+	}
 }
 
 //--------------------------------------------------------------
@@ -92,7 +100,7 @@ void ofApp::draw() {
 	}
 
 	gui.begin();
-	ImGui::SetNextWindowSize(ImVec2(520.0f, 590.0f), ImGuiCond_Once);
+	ImGui::SetNextWindowSize(ImVec2(620.0f, 720.0f), ImGuiCond_Once);
 	if (ImGui::Begin("Image Workflow")) {
 		ImGui::TextWrapped("%s", statusMessage.c_str());
 		ImGui::TextWrapped("%s", modelSummary.c_str());
@@ -102,20 +110,17 @@ void ofApp::draw() {
 		}
 		ImGui::Separator();
 
-		if (ImGui::InputText("Model", modelPathInput.data(), modelPathInput.size())) {
-			syncRequestFromUi();
-		}
+		ImGui::InputText("Model", &modelPath);
 		ImGui::SameLine();
 		if (ImGui::Button("Browse##model")) {
-			browseModelPath(modelPath, modelPathInput);
+			browseModelPath(modelPath);
 		}
-		if (ImGui::InputText("ControlNet model", controlNetPathInput.data(), controlNetPathInput.size())) {
-			syncRequestFromUi();
-		}
+		ImGui::InputText("ControlNet model", &controlNetPath);
 		ImGui::SameLine();
 		if (ImGui::Button("Browse##controlnet")) {
-			browseModelPath(controlNetPath, controlNetPathInput);
+			browseModelPath(controlNetPath);
 		}
+		ImGui::Combo("Backend", &backendIndex, backendLabels, IM_ARRAYSIZE(backendLabels));
 		const bool busy = sd.isBusy();
 		if (busy) {
 			ImGui::BeginDisabled();
@@ -128,13 +133,13 @@ void ofApp::draw() {
 		}
 		ImGui::Separator();
 
-		ImGui::Text("Mode: %s", imageModeLabels[modeIndex]);
-		if (ImGui::Button("TextToImage")) {
+		ImGui::Text("Workflow: %s", imageModeLabels[modeIndex]);
+		if (ImGui::Button("Text to image")) {
 			modeIndex = 0;
 			strength = 0.5f;
 		}
 		ImGui::SameLine();
-		if (ImGui::Button("ImageToImage")) {
+		if (ImGui::Button("Image to image")) {
 			modeIndex = 1;
 			strength = 0.5f;
 		}
@@ -144,19 +149,13 @@ void ofApp::draw() {
 			strength = 0.75f;
 		}
 
-		if (ImGui::InputTextMultiline("Prompt", promptInput.data(), promptInput.size(), ImVec2(-1.0f, 84.0f))) {
-			syncRequestFromUi();
-		}
-		if (ImGui::InputTextMultiline("Negative", negativePromptInput.data(), negativePromptInput.size(), ImVec2(-1.0f, 54.0f))) {
-			syncRequestFromUi();
-		}
+		ImGui::InputTextMultiline("Prompt", &prompt, ImVec2(-1.0f, 84.0f));
+		ImGui::InputTextMultiline("Negative", &negativePrompt, ImVec2(-1.0f, 54.0f));
 
 		if (modeIndex > 0) {
-			if (ImGui::InputText("Input image path", inputPathInput.data(), inputPathInput.size())) {
-				syncRequestFromUi();
-			}
+			ImGui::InputText("Input image path", &inputPath);
 			if (ImGui::Button("Browse Input...")) {
-				if (browseImagePath("Select input image", inputPath, inputPathInput)) {
+				if (browseImagePath("Select input image", inputPath)) {
 					loadInputImage();
 				}
 			}
@@ -168,14 +167,17 @@ void ofApp::draw() {
 			if (ImGui::Button("Clear Input")) {
 				clearInputImage();
 			}
+			ImGui::SameLine();
+			ImGui::Checkbox("Match input size", &autoMatchInputSize);
+			if (inputImage.data != nullptr) {
+				ImGui::Text("Input ready: %ux%u", inputImage.width, inputImage.height);
+			}
 		}
 
 		if (modeIndex == 2) {
-			if (ImGui::InputText("Mask path", maskPathInput.data(), maskPathInput.size())) {
-				syncRequestFromUi();
-			}
+			ImGui::InputText("Mask path", &maskPath);
 			if (ImGui::Button("Browse Mask...")) {
-				if (browseImagePath("Select mask image", maskPath, maskPathInput)) {
+				if (browseImagePath("Select mask image", maskPath)) {
 					loadMaskImage();
 				}
 			}
@@ -187,15 +189,18 @@ void ofApp::draw() {
 			if (ImGui::Button("Clear Mask")) {
 				clearMaskImage();
 			}
+			if (maskImage.data != nullptr) {
+				ImGui::Text("Mask ready: white = repaint, black = preserve");
+			} else {
+				ImGui::Text("Inpainting requires a mask");
+			}
 		}
 
 		ImGui::Checkbox("Use ControlNet guide", &useControlImage);
 		if (useControlImage) {
-			if (ImGui::InputText("Control image path", controlPathInput.data(), controlPathInput.size())) {
-				syncRequestFromUi();
-			}
+			ImGui::InputText("Control image path", &controlPath);
 			if (ImGui::Button("Browse Control...")) {
-				if (browseImagePath("Select control image", controlPath, controlPathInput)) {
+				if (browseImagePath("Select control image", controlPath)) {
 					loadControlImage();
 				}
 			}
@@ -220,7 +225,10 @@ void ofApp::draw() {
 		ImGui::InputInt("Seed", &seed);
 		ImGui::SliderInt("Batch", &batchCount, 1, 8);
 
-		const bool canGenerate = sd.hasLoadedContext() && !generating && !busy;
+		std::string readinessReason;
+		const bool workflowIsReady = workflowReady(readinessReason);
+		const bool canGenerate = workflowIsReady && !generating && !busy;
+		ImGui::Text("Workflow status: %s", readinessReason.c_str());
 		if (generating) {
 			ImGui::BeginDisabled();
 		}
@@ -263,21 +271,14 @@ void ofApp::draw() {
 }
 
 //--------------------------------------------------------------
-void ofApp::syncRequestFromUi() {
-	prompt = ofxGgmlStableDiffusionExampleInputString(promptInput);
-	negativePrompt = ofxGgmlStableDiffusionExampleInputString(negativePromptInput);
-	modelPath = ofxGgmlStableDiffusionExampleInputString(modelPathInput);
-	controlNetPath = ofxGgmlStableDiffusionExampleInputString(controlNetPathInput);
-	inputPath = ofxGgmlStableDiffusionExampleInputString(inputPathInput);
-	maskPath = ofxGgmlStableDiffusionExampleInputString(maskPathInput);
-	controlPath = ofxGgmlStableDiffusionExampleInputString(controlPathInput);
-}
-
-//--------------------------------------------------------------
 void ofApp::configureContext() {
-	syncRequestFromUi();
 	ofxGgmlStableDiffusionContextSettings settings;
 	settings.modelPath = ofxGgmlStableDiffusionExampleResolveReadablePath(modelPath);
+	if (!ofFile::doesFileExist(settings.modelPath)) {
+		statusMessage = "Model file not found";
+		modelSummary = "Browse or paste a readable local image model.";
+		return;
+	}
 	const std::string resolvedControlNetPath =
 		ofxGgmlStableDiffusionExampleResolveReadablePath(controlNetPath);
 	if (ofFile::doesFileExist(resolvedControlNetPath)) {
@@ -286,6 +287,13 @@ void ofApp::configureContext() {
 	settings.weightType = SD_TYPE_COUNT;
 	settings.nThreads = -1;
 	settings.flashAttn = true;
+	if (backendIndex > 0) {
+		settings.backend = ofxGgmlStableDiffusionExampleLower(backendLabels[backendIndex]);
+		settings.paramsBackend = settings.backend;
+	} else if (ofxGgmlStableDiffusionExampleSelectedRuntimeLooksCuda()) {
+		settings.backend = "cuda";
+		settings.paramsBackend = "cuda";
+	}
 	sd.configureContext(settings);
 	const auto capabilities = sd.getCapabilities();
 	contextLoading = sd.isBusy();
@@ -306,27 +314,24 @@ void ofApp::configureContext() {
 }
 
 //--------------------------------------------------------------
-void ofApp::browseModelPath(std::string& path, std::array<char, 512>& input) {
+void ofApp::browseModelPath(std::string& path) {
 	ofFileDialogResult result = ofSystemLoadDialog("Select model file");
 	if (!result.bSuccess) {
 		return;
 	}
 	path = result.getPath();
-	ofxGgmlStableDiffusionExampleCopyToInput(path, input);
 	statusMessage = "Selected model path";
 }
 
 //--------------------------------------------------------------
 bool ofApp::browseImagePath(
 	const std::string& title,
-	std::string& path,
-	std::array<char, 512>& input) {
+	std::string& path) {
 	ofFileDialogResult result = ofSystemLoadDialog(title, false, path);
 	if (!result.bSuccess) {
 		return false;
 	}
 	path = result.getPath();
-	ofxGgmlStableDiffusionExampleCopyToInput(path, input);
 	return true;
 }
 
@@ -339,20 +344,16 @@ void ofApp::startGeneration() {
 		statusMessage = sd.isBusy() ? "Model is still loading." : "Load a model before generating.";
 		return;
 	}
-	syncRequestFromUi();
+	std::string readinessReason;
+	if (!workflowReady(readinessReason)) {
+		statusMessage = readinessReason;
+		return;
+	}
+	if (!reloadRequiredImages(readinessReason)) {
+		statusMessage = readinessReason;
+		return;
+	}
 	const auto mode = currentMode();
-	if (ofxGgmlStableDiffusionImageModeUsesInputImage(mode) && inputImage.data == nullptr) {
-		statusMessage = "Load an input image for the selected mode.";
-		return;
-	}
-	if (mode == ofxGgmlStableDiffusionImageMode::Inpainting && maskImage.data == nullptr) {
-		statusMessage = "Load a mask image for inpainting.";
-		return;
-	}
-	if (useControlImage && controlImage.data == nullptr) {
-		statusMessage = "Load a control image or disable ControlNet guide.";
-		return;
-	}
 
 	ofxGgmlStableDiffusionImageRequest request;
 	request.mode = mode;
@@ -387,9 +388,17 @@ bool ofApp::loadImageSlot(const std::string& path, ofImage& image, ofPixels& pix
 
 //--------------------------------------------------------------
 void ofApp::loadInputImage() {
-	syncRequestFromUi();
+	const std::string resolved =
+		ofxGgmlStableDiffusionExampleResolveReadablePath(inputPath);
+	ofImage source;
+	if (autoMatchInputSize && source.load(resolved)) {
+		width = ofxGgmlStableDiffusionExampleAlignedDimension(
+			static_cast<int>(source.getWidth()));
+		height = ofxGgmlStableDiffusionExampleAlignedDimension(
+			static_cast<int>(source.getHeight()));
+	}
 	statusMessage = loadImageSlot(inputPath, inputImagePreview, inputPixels, inputImage) ?
-		"Input image loaded" :
+		"Input image loaded at " + ofToString(width) + "x" + ofToString(height) :
 		"Input image load failed";
 }
 
@@ -403,9 +412,8 @@ void ofApp::clearInputImage() {
 
 //--------------------------------------------------------------
 void ofApp::loadMaskImage() {
-	syncRequestFromUi();
 	statusMessage = loadImageSlot(maskPath, maskImagePreview, maskPixels, maskImage) ?
-		"Mask image loaded" :
+		"Mask loaded: white repaints, black preserves" :
 		"Mask image load failed";
 }
 
@@ -419,7 +427,6 @@ void ofApp::clearMaskImage() {
 
 //--------------------------------------------------------------
 void ofApp::loadControlImage() {
-	syncRequestFromUi();
 	statusMessage = loadImageSlot(controlPath, controlImagePreview, controlPixels, controlImage) ?
 		"Control image loaded" :
 		"Control image load failed";
@@ -446,6 +453,67 @@ void ofApp::saveResult() {
 //--------------------------------------------------------------
 void ofApp::drawResultPreview() {
 	ofxGgmlStableDiffusionExampleDrawImageFit(resultImage);
+}
+
+//--------------------------------------------------------------
+bool ofApp::workflowReady(std::string& reason) const {
+	if (!sd.hasLoadedContext()) {
+		reason = sd.isBusy() ? "Loading model..." : "Configure a local model first";
+		return false;
+	}
+	const auto mode = currentMode();
+	const auto capabilities = sd.getCapabilities();
+	if (!capabilities.supportsImageMode(mode)) {
+		reason = "The loaded model does not support " +
+			std::string(imageModeLabels[modeIndex]);
+		return false;
+	}
+	if (prompt.empty()) {
+		reason = "Enter a prompt";
+		return false;
+	}
+	if (ofxGgmlStableDiffusionImageModeUsesInputImage(mode) && inputImage.data == nullptr) {
+		reason = "Load an input image for this workflow";
+		return false;
+	}
+	if (mode == ofxGgmlStableDiffusionImageMode::Inpainting && maskImage.data == nullptr) {
+		reason = "Load a mask: white repaints, black preserves";
+		return false;
+	}
+	if (useControlImage && controlImage.data == nullptr) {
+		reason = "Load a control image or disable ControlNet guide";
+		return false;
+	}
+	if (useControlImage && !capabilities.controlNetConfigured &&
+		!capabilities.nativeControlModel) {
+		reason = "Configure a ControlNet model for the guide image";
+		return false;
+	}
+	reason = "Ready to generate " + std::string(imageModeLabels[modeIndex]);
+	return true;
+}
+
+//--------------------------------------------------------------
+bool ofApp::reloadRequiredImages(std::string& errorMessage) {
+	width = ofxGgmlStableDiffusionExampleAlignedDimension(width);
+	height = ofxGgmlStableDiffusionExampleAlignedDimension(height);
+	const auto mode = currentMode();
+	if (ofxGgmlStableDiffusionImageModeUsesInputImage(mode) &&
+		!loadImageSlot(inputPath, inputImagePreview, inputPixels, inputImage)) {
+		errorMessage = "Could not resize the input image for generation";
+		return false;
+	}
+	if (mode == ofxGgmlStableDiffusionImageMode::Inpainting &&
+		!loadImageSlot(maskPath, maskImagePreview, maskPixels, maskImage)) {
+		errorMessage = "Could not resize the mask for generation";
+		return false;
+	}
+	if (useControlImage &&
+		!loadImageSlot(controlPath, controlImagePreview, controlPixels, controlImage)) {
+		errorMessage = "Could not resize the control image for generation";
+		return false;
+	}
+	return true;
 }
 
 //--------------------------------------------------------------

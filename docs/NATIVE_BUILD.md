@@ -64,6 +64,9 @@ pass a backend flag, they default to CPU-only.
   Build CPU-only
 - `--gpu`, `--cuda` / `-Cuda`
   Build with CUDA
+- `--cuda-architectures LIST` / `-CudaArchitectures LIST`
+  Override CMake's CUDA architecture detection (for example, `86` for an RTX 3090).
+  The `OFXGGML_CUDA_ARCHITECTURES` environment variable provides the same value.
 - `--vulkan` / `-Vulkan`
   Build with Vulkan
 - `--metal` / `-Metal`
@@ -133,6 +136,9 @@ compatibility testing, but Core is the managed ecosystem default.
 
 # Explicit bundled fallback
 .\scripts\build-stable-diffusion.ps1 -UseBundledGgml -Cuda
+
+# Pin the CUDA architecture when CMake cannot detect a GPU during configuration
+.\scripts\build-stable-diffusion.ps1 -UseBundledGgml -Cuda -CudaArchitectures 86
 ```
 
 ### What Happens
@@ -154,6 +160,10 @@ When `-DSD_USE_SYSTEM_GGML=ON` is enabled:
 - stable-diffusion.cpp may require specific GGML versions or patches
 - Test thoroughly when updating either addon
 - Monitor for ABI changes between GGML versions
+- Upstream `master-820-de298c2` requires the stable-diffusion.cpp fork's
+  `ggml_mul_mat_i8_tensorwise` and `ggml_quantize_i8_convrot` APIs. Those APIs are
+  not present in ofxGgmlCore's current official ggml, so that release must use
+  `-UseBundledGgml`; do not copy diffusion-specific operations into Core.
 
 **Dependency Management:**
 - When using system GGML, your application must ensure the Core/provider GGML libraries are available at runtime
@@ -212,6 +222,8 @@ Available setup flags:
 
 - `--source-release-tag TAG`
   Override the upstream release tag used for the vendored source snapshot
+- `--cuda-architectures LIST`
+  Override CMake CUDA architecture detection
 
 Example:
 
@@ -232,6 +244,12 @@ kept out of the default setup surface because it does not use Core's ggml:
 scripts\build-stable-diffusion.bat --cuda --use-bundled-ggml --source-release-tag master-813-bfbef5b --ggml-release-tag v0.19.0
 ```
 
+The newest verified upstream runtime currently needs that bundled lane:
+
+```bat
+scripts\build-stable-diffusion.bat --cuda --cuda-architectures 86 --use-bundled-ggml --source-release-tag master-820-de298c2 --build-cli
+```
+
 The legacy-named helper below now does the same source-refresh job instead of
 staging prebuilt runtime binaries:
 
@@ -239,7 +257,7 @@ staging prebuilt runtime binaries:
 powershell -ExecutionPolicy Bypass -File .\scripts\download-stable-diffusion-release.ps1 -SourceReleaseTag master-813-bfbef5b
 ```
 
-## Current Pin
+## Current Compatibility Pin
 
 The vendored tree includes the required submodules so the native rebuild scripts
 can run end-to-end.
@@ -249,6 +267,19 @@ can run end-to-end.
 - Vendored on: `2026-08-10`
 - Default rebuilds use this release tag unless you override it via
   `--source-release-tag` / `-SourceReleaseTag`.
+
+## Latest Verified Upstream Runtime
+
+- Upstream release tag: `master-820-de298c2` (published 2026-08-12)
+- Upstream commit: `de298c225bed97c3f9026b73cd7b71e7879bd41b`
+- Verified on: `2026-08-13`
+- Verified configuration: Windows x64, CUDA architecture `86`, bundled upstream
+  ggml, RTX 3090, and model-backed SD-Turbo CLI inference.
+
+The default remains `master-813-bfbef5b` because it is the newest pin in this
+addon verified against the shared Core/system ggml lane. Use the newer release
+explicitly with `-UseBundledGgml` until its diffusion-specific ggml operations
+are available through a domain-neutral upstream interface.
 
 ## Header Notes
 

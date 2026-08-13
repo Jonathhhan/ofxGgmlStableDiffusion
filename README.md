@@ -401,6 +401,9 @@ backend per build:
   Force CPU-only native builds (default)
 - `--gpu`, `--cuda` / `-Cuda`
   Enable CUDA explicitly
+- `--cuda-architectures LIST` / `-CudaArchitectures LIST`
+  Override CMake CUDA architecture detection (for example, `86` for RTX 3090);
+  `OFXGGML_CUDA_ARCHITECTURES` is supported too
 - `--vulkan` / `-Vulkan`
   Enable Vulkan explicitly
 - `--metal` / `-Metal`
@@ -417,9 +420,9 @@ Variant selector helpers:
 - `scripts/select-stable-diffusion-backend.ps1 -Backend cuda`
 - `scripts/setup_windows.bat --skip-native --select-backend cuda`
 
-For Windows, `scripts/setup_windows.bat` and `scripts/setup_addon.ps1` now
-always refresh the vendored source from the latest upstream release-tag source
-snapshot, then build the native runtime locally.
+For Windows, `scripts/setup_windows.bat` and `scripts/setup_addon.ps1` refresh
+the vendored source from the configured release-tag snapshot, then build the
+native runtime locally.
 
 - `--source-release-tag TAG`
   Override the upstream release tag used for the vendored source snapshot
@@ -430,18 +433,20 @@ DLL exports automatically.
 
 ## Current Native Source Status
 
-The repo now includes a vendored upstream `stable-diffusion.cpp` source snapshot
-under `libs/stable-diffusion/source`, pinned to:
+Default Core-compatible rebuilds use this upstream `stable-diffusion.cpp` pin:
 
 - upstream repo: `https://github.com/leejet/stable-diffusion.cpp`
 - upstream release tag: `master-813-bfbef5b`
 - upstream commit: `bfbef5b7e64e89a0205894853de25d19a7ba54b9`
 - vendored on: `2026-08-10`
 
-The optional Windows prebuilt-runtime flow is currently pinned to the upstream
-GitHub release tag `master-813-bfbef5b`, which was the latest upstream release
-published on `2026-08-05` (verified 2026-08-11). Override it with `--source-release-tag` if you want a
-different upstream runtime. Source: [stable-diffusion.cpp releases](https://github.com/leejet/stable-diffusion.cpp/releases)
+The newer upstream release `master-820-de298c2` (commit
+`de298c225bed97c3f9026b73cd7b71e7879bd41b`, published 2026-08-12) was verified
+on Windows with CUDA and model-backed SD-Turbo inference on 2026-08-13. It uses
+diffusion-fork-only ggml INT8 ConvRot APIs that are not in Core's official ggml,
+so select it explicitly with `-UseBundledGgml -SourceReleaseTag
+master-820-de298c2`. The default stays on `master-813-bfbef5b` for the shared
+Core/system ggml lane. Source: [stable-diffusion.cpp releases](https://github.com/leejet/stable-diffusion.cpp/releases)
 
 The addon now includes the upstream header directly through
 `libs/stable-diffusion/include/stable-diffusion.h`, without re-exporting the
@@ -466,11 +471,17 @@ You can also use:
 - `scripts/run-tests.ps1`
 - `scripts/run-tests.sh`
 - `scripts/run-stable-diffusion-runtime-smoke.ps1 -Json -SummaryOnly`
+- `scripts/run-image-generation-smoke.ps1 -Model C:\path\to\model.safetensors -Backend cuda`
 
 Automatic runtime-smoke model discovery considers `.safetensors` and `.ckpt`
 files only. Pass `-Model` or set `OFXGGML_STABLE_DIFFUSION_MODEL` when using an
 explicit compatibility path; unrelated text-model GGUF files are not selected
 as Stable Diffusion readiness evidence.
+
+`run-image-generation-smoke.ps1` goes one step further than the CLI smoke: it
+launches the canonical openFrameworks starter, loads the configured local model
+through the addon wrapper, generates an image, validates the PNG signature, and
+requires the example's explicit success status.
 
 When a model is configured, the runtime smoke also invokes the bundled
 `sd-cli`, renders a deterministic 256x256 image, verifies the output artifact,

@@ -12,6 +12,7 @@ REM
 REM Options:
 REM   --cpu, --cpu-only     Build CPU backend only (default)
 REM   --gpu, --cuda         Enable CUDA backend
+REM   --cuda-architectures LIST       Set CMake CUDA architectures ^(for example: 86^)
 REM   --vulkan              Enable Vulkan backend
 REM   --metal               Enable Metal backend where supported
 REM   --all                 Build every available backend variant and leave the best one active
@@ -30,6 +31,7 @@ set "SETUP_SCRIPT=%SCRIPT_DIR%setup_addon.ps1"
 set "JOBS=%NUMBER_OF_PROCESSORS%"
 set "CPU_FLAG="
 set "CUDA_FLAG="
+set "CUDA_ARCHITECTURES_FLAG="
 set "VULKAN_FLAG="
 set "METAL_FLAG="
 set "ALL_FLAG="
@@ -114,6 +116,16 @@ if /i "%~1"=="--select-backend" (
     shift
     goto parse_args
 )
+if /i "%~1"=="--cuda-architectures" (
+    if "%~2"=="" (
+        echo Error: --cuda-architectures requires a value.
+        exit /b 1
+    )
+    set "CUDA_ARCHITECTURES_FLAG=-CudaArchitectures ""%~2"""
+    shift
+    shift
+    goto parse_args
+)
 if /i "%~1"=="--source-release-tag" (
     if "%~2"=="" (
         echo Error: --source-release-tag requires a value.
@@ -163,6 +175,7 @@ echo.
 echo Options:
 echo   --cpu, --cpu-only     Build CPU backend only ^(default^)
 echo   --gpu, --cuda         Enable CUDA backend
+echo   --cuda-architectures LIST       Set CMake CUDA architectures ^(for example: 86^)
 echo   --vulkan              Enable Vulkan backend
 echo   --metal               Enable Metal backend where supported
 echo   --all                 Build every available backend variant and leave the best one active
@@ -178,7 +191,7 @@ exit /b 0
 
 :done_args
 
-set "PS_ARGS=-Configuration Release -Jobs %JOBS% %CPU_FLAG% %CUDA_FLAG% %VULKAN_FLAG% %METAL_FLAG% %ALL_FLAG% %BUILD_CLI_FLAG% %SELECT_BACKEND_FLAG% %SOURCE_RELEASE_TAG_FLAG% %SKIP_NATIVE_FLAG% %CLEAN_FLAG% %DRY_RUN_FLAG%"
+set "PS_ARGS=-Configuration Release -Jobs %JOBS% %CPU_FLAG% %CUDA_FLAG% %CUDA_ARCHITECTURES_FLAG% %VULKAN_FLAG% %METAL_FLAG% %ALL_FLAG% %BUILD_CLI_FLAG% %SELECT_BACKEND_FLAG% %SOURCE_RELEASE_TAG_FLAG% %SKIP_NATIVE_FLAG% %CLEAN_FLAG% %DRY_RUN_FLAG%"
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SETUP_SCRIPT%" %PS_ARGS%
 set "EXIT_CODE=%ERRORLEVEL%"
 endlocal & exit /b %EXIT_CODE%

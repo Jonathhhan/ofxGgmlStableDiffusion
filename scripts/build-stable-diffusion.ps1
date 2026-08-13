@@ -16,6 +16,7 @@ param(
     [string]$GgmlReleaseTag = "",
     [Alias('Cpu')][switch]$CpuOnly,
     [Alias('Gpu')][switch]$Cuda,
+    [string]$CudaArchitectures = $(if ($env:OFXGGML_CUDA_ARCHITECTURES) { $env:OFXGGML_CUDA_ARCHITECTURES } else { "" }),
     [switch]$Vulkan,
     [switch]$Metal,
     [switch]$All,
@@ -304,6 +305,7 @@ function Invoke-SelfBuild {
         [string]$InstallBinDir,
         [string]$Configuration,
         [string]$SourceReleaseTag,
+        [string]$CudaArchitectures,
         [string]$Generator,
         [int]$Jobs,
         [string]$GgmlReleaseTag,
@@ -334,6 +336,9 @@ function Invoke-SelfBuild {
 
     if (-not [string]::IsNullOrWhiteSpace($SourceReleaseTag)) {
         $invokeArgs.SourceReleaseTag = $SourceReleaseTag
+    }
+    if (-not [string]::IsNullOrWhiteSpace($CudaArchitectures)) {
+        $invokeArgs.CudaArchitectures = $CudaArchitectures
     }
     if ($Clean) {
         $invokeArgs.Clean = $true
@@ -965,6 +970,7 @@ if ($All) {
             -InstallBinDir $InstallBinDir `
             -Configuration $Configuration `
             -SourceReleaseTag $SourceReleaseTag `
+            -CudaArchitectures $CudaArchitectures `
             -Generator $Generator `
             -Jobs $Jobs `
             -GgmlReleaseTag $GgmlReleaseTag `
@@ -1233,6 +1239,10 @@ $configureArgs += @(
     '-DSD_WEBM=ON'
 )
 
+if ($enableCuda -and -not [string]::IsNullOrWhiteSpace($CudaArchitectures)) {
+    $configureArgs += "-DCMAKE_CUDA_ARCHITECTURES=$CudaArchitectures"
+}
+
 # Add system GGML configuration if requested
 if ($UseSystemGgml) {
     $ofxGgmlCmakeDir = [System.IO.Path]::Combine($BuildDir, 'ofxggml-cmake')
@@ -1258,6 +1268,9 @@ Write-Host ("    Backend mode: {0} (CUDA={1}, Vulkan={2}, Metal={3})" -f
     $(if ($enableCuda) { 'ON' } else { 'OFF' }),
     $(if ($enableVulkan) { 'ON' } else { 'OFF' }),
     $(if ($enableMetal) { 'ON' } else { 'OFF' }))
+if ($enableCuda -and -not [string]::IsNullOrWhiteSpace($CudaArchitectures)) {
+    Write-Host ("    CUDA architectures: {0}" -f $CudaArchitectures)
+}
 if ($UseSystemGgml) {
     Write-Host ("    System GGML: ON (from {0})" -f $OfxGgmlPath)
 } else {

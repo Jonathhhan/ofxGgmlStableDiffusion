@@ -31,6 +31,26 @@ if /i "%~1"=="--gpu" (
     shift
     goto parse_args
 )
+if /i "%~1"=="--cuda-architectures" (
+    if "%~2"=="" (
+        echo Error: --cuda-architectures requires a value.
+        exit /b 1
+    )
+    set "PS_ARGS=!PS_ARGS! -CudaArchitectures ""%~2"""
+    shift
+    shift
+    goto parse_args
+)
+if /i "%~1"=="--build-cli" (
+    set "PS_ARGS=!PS_ARGS! -BuildCli"
+    shift
+    goto parse_args
+)
+if /i "%~1"=="--skip-source-refresh" (
+    set "PS_ARGS=!PS_ARGS! -SkipSourceRefresh"
+    shift
+    goto parse_args
+)
 if /i "%~1"=="--vulkan" (
     set "PS_ARGS=!PS_ARGS! -Vulkan"
     shift
@@ -177,10 +197,13 @@ echo Options:
 echo   --cpu, --cpu-only      Build CPU backend only
 echo   --auto                 Auto-detect GPU backends ^(default^)
 echo   --gpu, --cuda          Enable CUDA backend
+echo   --cuda-architectures LIST       Set CMake CUDA architectures ^(for example: 86^)
+echo   --build-cli            Also build and stage sd-cli.exe for native testing
 echo   --vulkan               Enable Vulkan backend
 echo   --metal                Enable Metal backend
 echo   --clean                Remove previous build directory before building
 echo   --source-release-tag TAG       Override the upstream release tag used for the source snapshot ^(default: master-813-bfbef5b^)
+echo   --skip-source-refresh  Reuse the existing vendored source tree
 echo   --ggml-release-tag TAG         Override ggml only with --use-bundled-ggml
 echo   --dry-run              Print commands without running them
 echo   --config NAME          Build configuration ^(default: Release^)

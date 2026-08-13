@@ -50,6 +50,10 @@ Assert-Contains $cudaOutput "Backend mode: cuda" "CUDA dry-run"
 Assert-Contains $cudaOutput "-DSD_CUDA=ON" "CUDA dry-run"
 Assert-Contains $cudaOutput "System GGML: ON" "CUDA dry-run"
 
+$cudaArchitectureOutput = & $buildScript -DryRun -SkipSourceRefresh -Cuda -CudaArchitectures 86 2>&1 6>&1 | Out-String
+Assert-Contains $cudaArchitectureOutput "CUDA architectures: 86" "CUDA architecture dry-run"
+Assert-Contains $cudaArchitectureOutput "-DCMAKE_CUDA_ARCHITECTURES=86" "CUDA architecture dry-run"
+
 $vulkanOutput = & $buildScript -DryRun -SkipSourceRefresh -Vulkan 2>&1 6>&1 | Out-String
 Assert-Contains $vulkanOutput "Backend mode: vulkan" "Vulkan dry-run"
 Assert-Contains $vulkanOutput "-DSD_VULKAN=ON" "Vulkan dry-run"

@@ -6,8 +6,10 @@ Small canonical `ofxImGui` starter for `ofxGgmlStableDiffusion`.
 
 - Load one Stable Diffusion image model
 - Restore the last successfully loaded model, or discover the first supported model in `bin/data/models/`
+- Recursively list local models with exact file sizes and rescan without restarting
 - Paste model paths and long prompts without fixed-size text buffers
 - Select CUDA automatically when the staged runtime contains CUDA support
+- Show the selected backend, context state, model size, and VRAM placement policy separately
 - Configure and restore native VRAM budgets, automatic device fitting, layer streaming, eager loading, and multi-device split modes
 - Generate one text-to-image request
 - Display progress and the latest generated image
@@ -33,3 +35,16 @@ negative reserve such as `-1`, or assignments such as `cuda0=6,cuda1=8`.
 successfully and are restored on the next run.
 
 SPACE starts generation, C or Esc requests cancellation, and S saves the current image.
+
+## Model-backed openFrameworks smoke
+
+After building the example and staging a native runtime, exercise the actual
+openFrameworks wrapper path with a local model:
+
+```powershell
+.\scripts\run-image-generation-smoke.ps1 -Model C:\path\to\model.safetensors -Backend cuda
+```
+
+The opt-in smoke mode loads the model, generates a 256x256 one-step image,
+validates the saved PNG, reports a process exit status, and leaves normal
+interactive runs unchanged.

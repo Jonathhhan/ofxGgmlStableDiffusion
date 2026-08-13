@@ -4,6 +4,18 @@
 
 ### Changed
 
+- The starter recursively discovers local image models, exposes a compact model
+  chooser with file sizes, and separates backend/context state from the configured
+  VRAM placement policy.
+- ImageWorkflow replaces fixed path/prompt buffers with pasteable strings, adds
+  explicit backend selection, input-size matching, aligned image reloads, and
+  mode-aware readiness guidance for image-to-image, inpainting, and ControlNet.
+- Verifies upstream `stable-diffusion.cpp` `master-820-de298c2` with a real CUDA
+  SD-Turbo inference through the bundled compatibility lane while retaining
+  `master-813-bfbef5b` as the default Core/system-ggml-compatible pin.
+- Native Windows build and setup entrypoints accept an explicit CUDA architecture
+  via `-CudaArchitectures`, `--cuda-architectures`, or
+  `OFXGGML_CUDA_ARCHITECTURES`, including recursive `-All` builds.
 - Aligns every active source-update entrypoint and current-pin document with upstream `stable-diffusion.cpp` release `master-813-bfbef5b` (published 2026-08-05).
 - The canonical starter restores or discovers image models, accepts pasteable unbounded model/prompt strings, and selects a staged CUDA runtime automatically.
 - The default Windows setup no longer refreshes or exposes a second unused ggml tree; explicit ggml release pins are limited to the bundled compatibility lane.
@@ -23,6 +35,9 @@
 
 ### Added
 
+- The canonical starter has an opt-in, model-backed image-generation smoke mode
+  and launcher that validate the actual openFrameworks wrapper path through a
+  saved PNG and explicit process status.
 - Context settings now expose upstream VRAM budgets, layer streaming, eager parameter loading, automatic device fitting, and multi-device split modes; workflow snapshots and the canonical starter preserve these settings.
 - Regression coverage for video export rejection paths and the local RIFF/AVI fallback writer.
 

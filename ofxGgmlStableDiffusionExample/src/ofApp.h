@@ -7,6 +7,7 @@
 
 #include <atomic>
 #include <string>
+#include <vector>
 
 class ofApp : public ofBaseApp {
 public:
@@ -19,6 +20,8 @@ private:
 	std::string getLastModelPathFile() const;
 	std::string getRuntimePreferencesFile() const;
 	std::string findInitialModelPath() const;
+	void refreshModelList();
+	std::string memoryPolicySummary() const;
 	void saveLoadedModelPath();
 	void loadRuntimePreferences();
 	void saveRuntimePreferences() const;
@@ -28,6 +31,8 @@ private:
 	void cancelGeneration();
 	void saveResult();
 	void drawResultPreview();
+	void updateImageSmoke();
+	void finishImageSmoke(int exitCode, const std::string& message);
 
 	ofxGgmlStableDiffusion stableDiffusion;
 	ofxImGui::Gui gui;
@@ -38,6 +43,8 @@ private:
 	std::string negativePrompt;
 	std::string statusMessage = "Ready";
 	std::string modelSummary = "No model loaded";
+	std::vector<std::string> availableModels;
+	int selectedModelIndex = -1;
 
 	int width = 512;
 	int height = 512;
@@ -53,5 +60,10 @@ private:
 	bool imGuiOk = true;
 	bool contextLoading = false;
 	bool generating = false;
+	bool imageSmoke = false;
+	bool imageSmokeGenerationStarted = false;
+	uint64_t imageSmokeStartMillis = 0;
+	uint64_t imageSmokeTimeoutMillis = 120000;
+	std::string imageSmokeOutputPath;
 	std::atomic<float> progress{0.0f};
 };

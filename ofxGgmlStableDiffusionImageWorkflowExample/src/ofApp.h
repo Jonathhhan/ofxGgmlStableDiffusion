@@ -5,7 +5,6 @@
 #include "ofxGgmlStableDiffusionExampleHelpers.h"
 #include "ofxImGui.h"
 
-#include <array>
 #include <atomic>
 #include <string>
 
@@ -17,10 +16,9 @@ public:
 	void keyPressed(int key);
 
 private:
-	void syncRequestFromUi();
 	void configureContext();
-	void browseModelPath(std::string& path, std::array<char, 512>& input);
-	bool browseImagePath(const std::string& title, std::string& path, std::array<char, 512>& input);
+	void browseModelPath(std::string& path);
+	bool browseImagePath(const std::string& title, std::string& path);
 	void startGeneration();
 	void cancelGeneration();
 	bool loadImageSlot(const std::string& path, ofImage& image, ofPixels& pixels, sd_image_t& view);
@@ -32,6 +30,8 @@ private:
 	void clearControlImage();
 	void saveResult();
 	void drawResultPreview();
+	bool workflowReady(std::string& reason) const;
+	bool reloadRequiredImages(std::string& errorMessage);
 	ofxGgmlStableDiffusionImageMode currentMode() const;
 
 	ofxGgmlStableDiffusion sd;
@@ -46,13 +46,6 @@ private:
 	sd_image_t inputImage{0, 0, 0, nullptr};
 	sd_image_t maskImage{0, 0, 0, nullptr};
 	sd_image_t controlImage{0, 0, 0, nullptr};
-	std::array<char, 512> promptInput{};
-	std::array<char, 512> negativePromptInput{};
-	std::array<char, 512> modelPathInput{};
-	std::array<char, 512> controlNetPathInput{};
-	std::array<char, 512> inputPathInput{};
-	std::array<char, 512> maskPathInput{};
-	std::array<char, 512> controlPathInput{};
 	std::string prompt;
 	std::string negativePrompt;
 	std::string modelPath;
@@ -63,6 +56,7 @@ private:
 	std::string statusMessage;
 	std::string modelSummary;
 	int modeIndex = 0;
+	int backendIndex = 0;
 	int width = 512;
 	int height = 512;
 	int sampleSteps = 20;
@@ -72,6 +66,7 @@ private:
 	float strength = 0.5f;
 	float controlStrength = 0.9f;
 	bool useControlImage = false;
+	bool autoMatchInputSize = true;
 	bool imGuiOk = true;
 	bool generating = false;
 	bool contextLoading = false;
