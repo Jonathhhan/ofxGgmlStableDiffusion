@@ -52,6 +52,7 @@ ofxGgmlStableDiffusion*Example/bin/data/*.webp
 ofxGgmlStableDiffusion*Example/bin/data/*.webm
 ofxGgmlStableDiffusion*Example/bin/data/*.avi
 ofxGgmlStableDiffusion*Example/bin/data/last_model.txt
+ofxGgmlStableDiffusion*Example/bin/data/last_runtime_settings.txt
 
 # Native staging output
 libs/ggml/
